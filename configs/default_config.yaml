@@ -1,7 +1,7 @@
 data:
-  data_root: data/waymo/processed/training # data root for the dataset
-  dataset: waymo # choose from ["waymo", "nuscenes"]
-  scene_idx: 0 # which scene to use, [0, 798] for waymo's training set and [0, 849] for nuscenes's train/val sets, inclusive
+  data_root: /home/uchihadj/nuScenes # data root for the dataset
+  dataset: nuscenes # choose from ["waymo", "nuscenes"]
+  scene_idx: 103 # which scene to use, [0, 798] for waymo's training set and [0, 849] for nuscenes's train/val sets, inclusive
   start_timestep: 0 # which timestep to start from
   end_timestep: -1 # which timestep to end at, -1 means the last timestep
   ray_batch_size: 8192 # ray batch size for training, it's embedded in the dataset class for now
@@ -163,6 +163,6 @@ logging:
 resume_from: null # path to a checkpoint to resume from
 eval:
   eval_lidar_flow: False # whether to evaluate lidar flow, only available for waymo for now
-  remove_ground_when_eval_lidar_flow: True # whether to remove ground points when evaluating lidar flow
+  remove_ground_when_eval_lidar_flow: TruSSSe # whether to remove ground points when evaluating lidar flow
   eval_occ: False # whether to evaluate voxel classification, only available for waymo for now
   occ_annotation_stride: 10 # use every Nth timestep for the annotations

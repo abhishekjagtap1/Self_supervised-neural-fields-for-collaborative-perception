@@ -13,6 +13,7 @@ from omegaconf import OmegaConf
 from tqdm import tqdm
 
 import builders
+print("done")
 import loss
 import utils.misc as misc
 import wandb
