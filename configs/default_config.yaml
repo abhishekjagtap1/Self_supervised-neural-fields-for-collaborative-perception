@@ -1,7 +1,7 @@
 data:
   data_root: /home/uchihadj/nuScenes # data root for the dataset
   dataset: nuscenes # choose from ["waymo", "nuscenes"]
-  scene_idx: 103 # which scene to use, [0, 798] for waymo's training set and [0, 849] for nuscenes's train/val sets, inclusive
+  scene_idx: 1 # which scene to use, [0, 798] for waymo's training set and [0, 849] for nuscenes's train/val sets, inclusive
   start_timestep: 0 # which timestep to start from
   end_timestep: -1 # which timestep to end at, -1 means the last timestep
   ray_batch_size: 8192 # ray batch size for training, it's embedded in the dataset class for now

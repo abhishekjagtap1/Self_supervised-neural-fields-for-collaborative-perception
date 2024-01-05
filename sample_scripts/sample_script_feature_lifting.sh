@@ -11,10 +11,9 @@ project=feature_lifting
 
 # use default_config.yaml for static scenes
 # for novel view synthesis, change test_image_stride to 10
-python train_emernerf.py \
-    --config_file configs/default_dynamic.yaml \
-    --output_root $output_root \
-    --project $project \
+python /home/uchihadj/EmerNeRF/train_emernerf.py \
+    --config_file /home/uchihadj/EmerNeRF/configs/default_dynamic.yaml \
+    --project /home/uchihadj/EmerNeRF/work_dirs/emernerf \
     --run_name ${scene_idx}_flow \
     data.scene_idx=$scene_idx \
     data.start_timestep=$start_timestep \

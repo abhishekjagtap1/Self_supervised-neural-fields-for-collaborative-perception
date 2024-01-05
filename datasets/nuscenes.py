@@ -80,7 +80,7 @@ class NuScenesPixelSource(ScenePixelSource):
 
         if self.nusc is None:
             self.nusc = NuScenes(
-                version="v1.0-trainval", dataroot=self.data_path, verbose=True
+                version="v1.0-mini", dataroot=self.data_path, verbose=True
             )
             self.scene = self.nusc.scene[self.scene_idx]
         total_camera_list = [
@@ -157,6 +157,7 @@ class NuScenesPixelSource(ScenePixelSource):
         with open(self.meta_file_path, "w") as f:
             json.dump(meta_dict, f, cls=NumpyEncoder)
         logger.info(f"[Pixel] Saved camera meta to {self.meta_file_path}")
+        print('meta_dict',meta_dict)
         return meta_dict
 
     def create_all_filelist(self):
@@ -309,7 +310,7 @@ class NuScenesLiDARSource(SceneLidarSource):
 
         if self.nusc is None:
             self.nusc = NuScenes(
-                version="v1.0-trainval", dataroot=self.data_path, verbose=True
+                version="v1.0-mini", dataroot=self.data_path, verbose=True
             )
         self.scene = self.nusc.scene[self.scene_idx]
 
