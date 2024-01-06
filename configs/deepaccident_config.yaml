@@ -1,5 +1,6 @@
 data:
-  data_root: /home/uchihadj/nuScenes # data root for the dataset
+  data_root: /home/uchihadj/DeepAccident/data/DeepAccident_data
+  img_meta_file_path: /home/uchihadj/DeepAccident/data/carla_infos/carla_infos_val.pkl # data root for the dataset
   dataset: nuscenes # choose from ["waymo", "nuscenes"]
   scene_idx: 1 # which scene to use, [0, 798] for waymo's training set and [0, 849] for nuscenes's train/val sets, inclusive
   start_timestep: 0 # which timestep to start from
@@ -32,7 +33,7 @@ data:
     # ---- compute aabb from lidar ---- #
     # if load_lidar is True, we compute aabb from lidar, otherwise we compute aabb from cameras
     # 1) downsample lidar by random sampling to 1/lidar_downsample_factor number of points
-    # 2) compute aabb from the downsampled lidar points by using the percentile of lidar_percentiles 
+    # 2) compute aabb from the downsampled lidar points by using the percentile of lidar_percentiles
     lidar_downsample_factor: 4 # downsample lidar by this factor to compute percentile
     lidar_percentile: 0.02  # percentile to compute aabb from lidar
   occ_source: # occupancy annotations from the occ3D dataset
@@ -108,7 +109,7 @@ render: # rendering hyperparameters
   render_novel_trajectory: False # whether to render a predefined novel trajectory after training
   fps: 24 # fps for the rendered video
   render_low_res: True # whether to render low-res video for preview after training
-  render_full: True # whether to render full-set video (train&test set) after training 
+  render_full: True # whether to render full-set video (train&test set) after training
   render_test: True # whether to render test set after training
   low_res_downscale: 4 # downscale factor for the low-res video
   save_html: False # whether to save html visualization of voxels
@@ -127,7 +128,7 @@ supervision: # supervision hyperparameters
       loss_type: "my" # self-implemented line-of-sight loss
       loss_coef: 0.1 # how about 0.01?
       start_iter: 2000 # when to start using line-of-sight loss
-      # if your flow field is not accurate or collapsed, 
+      # if your flow field is not accurate or collapsed,
       # you may want to use a stronger line-of-sight loss
       # e.g., reduce start_epsilon to 3.0 and end_epsilon to 1.0
       # but it will lower PSNR
@@ -142,7 +143,7 @@ supervision: # supervision hyperparameters
     loss_type: l2 # choose from ["l1", "smooth_l1", "l2"]
     loss_coef: 0.5 # didn't do any ablation study on this
   dynamic: # dynamic regularization
-    loss_type: sparsity 
+    loss_type: sparsity
     loss_coef: 0.01
     entropy_loss_skewness: 1.1 # TODO: we didn't study this yet
   shadow: # shadow regularization

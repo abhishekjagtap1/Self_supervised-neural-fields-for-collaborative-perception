@@ -82,7 +82,9 @@ class NuScenesPixelSource(ScenePixelSource):
             self.nusc = NuScenes(
                 version="v1.0-mini", dataroot=self.data_path, verbose=True
             )
+            #self.scene = self.nusc.scene[self.scene_idx]
             self.scene = self.nusc.scene[self.scene_idx]
+            #self.scene = self.scene[0]
         total_camera_list = [
             "CAM_FRONT_LEFT",
             "CAM_FRONT",
@@ -154,10 +156,12 @@ class NuScenesPixelSource(ScenePixelSource):
 
                 current_camera_data_tokens[camera] = current_camera_data["next"]
 
+        print('meta_dict', meta_dict)
+
         with open(self.meta_file_path, "w") as f:
             json.dump(meta_dict, f, cls=NumpyEncoder)
         logger.info(f"[Pixel] Saved camera meta to {self.meta_file_path}")
-        print('meta_dict',meta_dict)
+
         return meta_dict
 
     def create_all_filelist(self):

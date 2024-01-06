@@ -27,6 +27,7 @@ from utils.logging import MetricLogger, setup_logging
 from utils.visualization_tools import visualize_voxels, visualize_scene_flow
 
 
+
 logger = logging.getLogger()
 current_time = time.strftime("%Y-%m-%d_%H-%M-%S", time.localtime())
 
@@ -124,7 +125,7 @@ def get_args_parser():
 
 def setup(args):
     # ------ get config from args -------- #
-    default_config = OmegaConf.create(OmegaConf.load("configs/default_config.yaml"))
+    default_config = OmegaConf.create(OmegaConf.load("configs/deepaccident_config.yaml"))
     cfg = OmegaConf.load(args.config_file)
     cfg = OmegaConf.merge(default_config, cfg, OmegaConf.from_cli(args.opts))
     log_dir = os.path.join(args.output_root, args.project, args.run_name)
@@ -446,9 +447,10 @@ def main(args):
         dataset = WaymoDataset(data_cfg=cfg.data)
     else:
         from datasets.nuscenes import NuScenesDataset
-        from datasets.deepaccident import Deepaccident
+        from datasets.deepaccident import DeepaccidentDataset
 
-        dataset = Deepaccident(data_cfg=cfg.data)
+        #dataset = NuScenesDataset(data_cfg=cfg.data)
+        dataset = DeepaccidentDataset(data_cfg=cfg.data)
 
     # To give us a quick preview of the scene, we render a data video
     if args.render_data_video or args.render_data_video_only:

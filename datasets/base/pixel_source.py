@@ -237,7 +237,21 @@ class ScenePixelSource(abc.ABC):
         for fname in tqdm(
             self.img_filepaths, desc="Loading images", dynamic_ncols=True
         ):
+            #fname = '/home/uchihadj/DeepAccident/data/DeepAccident_data/./data/DeepAccident_data/type1_subtype1_accident/ego_vehicle/Camera_FrontLeft/Town01_type001_subtype0001_scenario00004/Town01_type001_subtype0001_scenario00004_031.jpg'
+
+            #Find the index of './data/DeepAccident_data/'
+            index_to_remove = fname.find('./data/DeepAccident_data/')
+
+            if index_to_remove != -1:
+                # Use slicing to remove the specified part
+                new_fname = fname[:index_to_remove] + fname[index_to_remove + len('./data/DeepAccident_data/'):]
+
+                #print(new_fname)
+            else:
+                pass#print("Substring not found in the file path.")
+
             rgb = Image.open(fname).convert("RGB")
+            #rgb = Image.open(new_fname).convert("RGB")
             # resize them to the load_size
             rgb = rgb.resize(
                 (self.data_cfg.load_size[1], self.data_cfg.load_size[0]), Image.BILINEAR
