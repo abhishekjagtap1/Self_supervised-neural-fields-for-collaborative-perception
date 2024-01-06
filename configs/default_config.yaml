@@ -1,7 +1,7 @@
 data:
   data_root: /home/uchihadj/nuScenes # data root for the dataset
   dataset: nuscenes # choose from ["waymo", "nuscenes"]
-  scene_idx: 103 # which scene to use, [0, 798] for waymo's training set and [0, 849] for nuscenes's train/val sets, inclusive
+  scene_idx: 1 # which scene to use, [0, 798] for waymo's training set and [0, 849] for nuscenes's train/val sets, inclusive
   start_timestep: 0 # which timestep to start from
   end_timestep: -1 # which timestep to end at, -1 means the last timestep
   ray_batch_size: 8192 # ray batch size for training, it's embedded in the dataset class for now
@@ -9,7 +9,7 @@ data:
   pixel_source: # everything related to "pixels" --- from camera images
     load_size: [640, 960] # [height, width], resize the raw image to this size
     downscale: 1 # downscale factor wrt to the load_size. for example, you may want to render a low-resolution video for preview
-    num_cams: 3 # number of cameras to use, choose from [1, 3, 5] for waymo, [1, 3, 6] for nuscenes. 1: frontal, 3: frontal + frontal_left + frontal_right
+    num_cams: 6 # number of cameras to use, choose from [1, 3, 5] for waymo, [1, 3, 6] for nuscenes. 1: frontal, 3: frontal + frontal_left + frontal_right
     test_image_stride: 0 # use every Nth timestep for the test set. if 0, use all images for training and none for testing
     load_rgb: True  # whether to load rgb images
     load_sky_mask: True  # whether to load sky masks. We provide pre-extracted sky masks for waymo and nuscenes on google drive
@@ -25,7 +25,7 @@ data:
       buffer_downscale: 16 # downscale factor for the buffer wrt load_size
       buffer_ratio: 0.25 # how many samples to use from the buffer, 0.25 = 25% of the sampled rays will be from the buffer
   lidar_source: # everything related to "lidar" --- from lidar points
-    load_lidar: True # whether to load lidar
+    load_lidar: False # whether to load lidar
     only_use_top_lidar: False # whether to only use the top lidar, only available for waymo for now
     truncated_max_range: 80 # max range for truncated lidar in a ego-centric coordinate system
     truncated_min_range: -2 # min range for truncated lidar in a ego-centric coordinate system. this value should be -80 for nuScenes.
