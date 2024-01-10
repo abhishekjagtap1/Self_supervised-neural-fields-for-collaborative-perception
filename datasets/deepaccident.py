@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 from pyquaternion import Quaternion
 from torch import Tensor
 from tqdm import trange
-
+import pyquaternion
 from datasets.base.lidar_source import SceneLidarSource
 from datasets.base.pixel_source import ScenePixelSource
 from datasets.base.scene_dataset import SceneDataset
@@ -146,7 +146,19 @@ class DeepAccidentPixelSource(ScenePixelSource):
                 img_infos[0]["Camera_FrontLeft"]["camera_intrinsic_matrix"])
             # check for camera visisblity is
             # meta_dict["Camera_FrontLef"]['kind_of_cam_id'].append(info['camera_visibility'])
+            #compute extrinsics
+            e2g_trans_matrix = np.zeros((4, 4), dtype=np.float32)
+            e2g_rot = info['ego2global_rotation']
+            e2g_trans = info['ego2global_translation']
+            e2g_trans_matrix[:3, :3] = pyquaternion.Quaternion(
+                e2g_rot).rotation_matrix
+            e2g_trans_matrix[:3, 3] = np.array(e2g_trans)
+            e2g_trans_matrix[3, 3] = 1.0
+            print(e2g_trans_matrix)
+            #old_function for extrinsics
             meta_dict["Camera_FrontLeft"]['extrinsics'].append(info["lidar_to_ego_matrix"])
+            #meta_dict["Camera_FrontLeft"]['extrinsics'].append(e2g_trans_matrix)
+
             # second camera
             meta_dict["Camera_Front"]['timestamp'].append(img_infos[0]["Camera_Front"]["timestamp"])
             meta_dict["Camera_Front"]["filepath"].append(img_infos[0]["Camera_Front"]["image_path"])
@@ -273,6 +285,11 @@ class DeepAccidentPixelSource(ScenePixelSource):
         global_to_initial_ego = np.linalg.inv(initial_ego_to_global)
 
         for t in range(self.start_timestep, self.end_timestep):
+
+            """
+            Ego to world coordinate system for deep accident
+            """
+
             ego_to_global_current = self.meta_dict["Camera_Front"]["ego_pose"][t]
             # compute ego_to_world transformation
             ego_to_world = global_to_initial_ego @ ego_to_global_current
@@ -312,6 +329,7 @@ class DeepAccidentPixelSource(ScenePixelSource):
         )
 
         self.cam_to_worlds = torch.from_numpy(np.stack(cam_to_worlds, axis=0)).float()
+        #self.cam_to_worlds = None
         self.ego_to_worlds = torch.from_numpy(np.stack(ego_to_worlds, axis=0)).float()
         self.global_to_initial_ego = torch.from_numpy(global_to_initial_ego).float()
         self.cam_ids = torch.from_numpy(np.stack(cam_ids, axis=0)).long()
@@ -332,7 +350,7 @@ class DeepaccidentDataset(SceneDataset):
         data_cfg: OmegaConf,
     ) -> None:
         super().__init__(data_cfg)
-        assert self.data_cfg.dataset == "nuscenes"
+        assert self.data_cfg.dataset == "deepaccident"
         self.data_path = self.data_cfg.data_root
 
         # ---- create pixel source ---- #

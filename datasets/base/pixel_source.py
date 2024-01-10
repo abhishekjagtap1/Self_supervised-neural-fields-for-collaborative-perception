@@ -244,7 +244,7 @@ class ScenePixelSource(abc.ABC):
 
             if index_to_remove != -1:
                 # Use slicing to remove the specified part
-                new_fname = fname[:index_to_remove] + fname[index_to_remove + len('./data/DeepAccident_data/'):]
+                fname = fname[:index_to_remove] + fname[index_to_remove + len('./data/DeepAccident_data/'):]
 
                 #print(new_fname)
             else:
@@ -880,7 +880,9 @@ class ScenePixelSource(abc.ABC):
         """
         Returns:
             the number of image timesteps in the dataset
+
         """
+        #print("len(self.timesteps.unique())", len(torch.unique(self.timesteps)))
         return len(self.timesteps.unique())
 
     @property
@@ -944,6 +946,7 @@ class ScenePixelSource(abc.ABC):
         ), "The normalized timestamps must be in the range [0, 1]."
         self._normalized_timestamps = normalized_timestamps.to(self.device)
         self._unique_normalized_timestamps = self._normalized_timestamps.unique()
+        #self._unique_normalized_timestamps = self._normalized_timestamps
 
     def find_closest_timestep(self, normed_timestamp: float) -> int:
         """

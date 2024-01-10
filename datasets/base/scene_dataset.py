@@ -10,6 +10,7 @@ from typing import List
 import logging
 
 logger = logging.getLogger()
+#change unique nomralized timestep
 
 
 class SceneDataset(abc.ABC):
@@ -100,7 +101,12 @@ class SceneDataset(abc.ABC):
 
     @property
     def unique_normalized_training_timestamps(self) -> Tensor:
-        return self.pixel_source.unique_normalized_timestamps[self.train_timesteps]
+        #print("Unique Normalized Training Timestamps",
+         #     self.pixel_source.unique_normalized_timestamps[self.train_timesteps])
+        #print("Unique Normalized Training Timestamps", self.train_timesteps)
+
+
+        return self.pixel_source.unique_normalized_timestamps
 
     @property
     def device(self):

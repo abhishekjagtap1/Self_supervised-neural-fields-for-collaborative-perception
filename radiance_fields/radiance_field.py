@@ -24,6 +24,7 @@ class RadianceField(nn.Module):
         dynamic_xyz_encoder: Optional[HashEncoder] = None,
         flow_xyz_encoder: Optional[HashEncoder] = None,
         aabb: Union[Tensor, List[float]] = [-1, -1, -1, 1, 1, 1],
+        #aabb: Union[Tensor, List[float]] = [ -59.0768, -102.0572,   -4.9288,  244.7985,  202.3327,   20.0000],
         num_dims: int = 3,
         density_activation: Callable = lambda x: trunc_exp(x - 1),
         unbounded: bool = True,

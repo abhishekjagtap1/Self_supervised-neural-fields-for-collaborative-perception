@@ -374,7 +374,7 @@ def render_rays(
         )
         extras = chunk_results_dict.pop("extras")
         results.append(chunk_results_dict)
-    render_results = collate(
+        render_results = collate(
         results,
         collate_fn_map={
             **default_collate_fn_map,

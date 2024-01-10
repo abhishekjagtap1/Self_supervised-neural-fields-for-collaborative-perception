@@ -41,4 +41,16 @@
     logging.saveckpt_freq=25000 \
     optim.num_iters= 25000
     -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    ........................------------------------------------------------------------------------------------------------
+    -
+    deepaccident
+    -----------------------------------------------------------------------------------
+     python deepaccident_data_nerf.py \
+    --config_file configs/deepaccident_config.yaml \
+    --project emernerf_deepaccident \
+    --run_name  run2
 
+
+###########################
+pixel_source is the rror where view_dirs and intrinsic are not in proper shaüe
+line 792
