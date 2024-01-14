@@ -1,4 +1,8 @@
-# EmerNeRF
+# Self Supervised Neural fields for collaborative perception
+
+## Based on Emernerf
+
+# Note Readme is not updated, switch between branches to test and evaluate for nuscenes - "dev_nuscenes_nuscenes" and deep accident v2x dataset - "dev_load_calibration"
 
 PyTorch implementation of:
 > [**EmerNeRF: Emergent Spatial-Temporal Scene Decomposition via Self-Supervision**](https://arxiv.org/abs/2311.02077),  
