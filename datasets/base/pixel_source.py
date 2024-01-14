@@ -54,11 +54,20 @@ def get_rays(
         intrinsic = intrinsic[None, :, :]
     if len(c2w.shape) == 2:
         c2w = c2w[None, :, :]
+    # Create a transformation matrix to convert the deep accident intrinsic to the desired format
+    # Create a transformation matrix to convert the deep accident intrinsic to the desired format
+    transformation_matrix = torch.tensor([[1.0, 0.0, 0.0],
+                                          [0.0, -1.0, 0.0],
+                                          [0.0, 0.0, 1.0]], device='cuda:0')  # Use floating-point numbers
+
+    # Apply the transformation to the deep accident intrinsic
+    intrinsic = torch.matmul(intrinsic.float(), transformation_matrix.transpose(0, 1))
+    eps = 1e-6  # Small epsilon value
     camera_dirs = torch.nn.functional.pad(
         torch.stack(
             [
                 (x - intrinsic[:, 0, 2] + 0.5) / intrinsic[:, 0, 0],
-                (y - intrinsic[:, 1, 2] + 0.5) / intrinsic[:, 1, 1],
+                (y - intrinsic[:, 1, 2] + 0.5) / (intrinsic[:, 1, 1] + eps),
             ],
             dim=-1,
         ),
@@ -83,7 +92,7 @@ class ScenePixelSource(abc.ABC):
 
     # the original size of the images in the dataset
     # these values are from the waymo dataset as a placeholder
-    ORIGINAL_SIZE = [[1280, 1920], [1280, 1920], [1280, 1920], [884, 1920], [884, 1920]]
+    ORIGINAL_SIZE = [[1600, 900], [1600, 900], [1600, 900], [1600, 900], [1600, 900]]
 
     # define a transformation matrix to convert the opencv camera coordinate system to the dataset camera coordinate system
     OPENCV2DATASET = np.array(
@@ -171,8 +180,8 @@ class ScenePixelSource(abc.ABC):
         """
         A general function to load all data.
         """
-        self.load_calibrations()
-        self.load_rgb()
+        self.load_calibrations()#####################################################################This we have to check##################################################################################
+        self.load_rgb()###############################################################################################This is pakka corerect#######################################################################################################
         self.load_dynamic_mask()
         self.load_sky_mask()
         self.load_features()
@@ -838,7 +847,7 @@ class ScenePixelSource(abc.ABC):
             dtype=torch.long,
         )
         c2w = self.cam_to_worlds[img_idx]
-        intrinsics = self.intrinsics[img_idx] * self.downscale_factor
+        intrinsics = self.intrinsics[img_idx] #* self.downscale_factor
         intrinsics[2, 2] = 1.0
         origins, viewdirs, direction_norm = get_rays(x, y, c2w, intrinsics)
         origins = origins.reshape(img_height, img_width, 3)

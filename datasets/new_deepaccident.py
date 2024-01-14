@@ -10,7 +10,7 @@ from omegaconf import OmegaConf
 from pyquaternion import Quaternion
 from torch import Tensor
 from tqdm import trange
-import pyquaternion
+
 from datasets.base.lidar_source import SceneLidarSource
 from datasets.base.pixel_source import ScenePixelSource
 from datasets.base.scene_dataset import SceneDataset
@@ -18,9 +18,11 @@ from datasets.base.split_wrapper import SplitWrapper
 from datasets.utils import voxel_coords_to_world_coords
 from radiance_fields.video_utils import save_videos, depth_visualizer
 from utils.misc import NumpyEncoder
-import pickle
+
 logger = logging.getLogger()
-class DeepAccidentPixelSource(ScenePixelSource):
+
+
+class NuScenesPixelSource(ScenePixelSource):
     ORIGINAL_SIZE = [[900, 1600] for _ in range(6)]
     OPENCV2DATASET = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]])
 
@@ -38,7 +40,6 @@ class DeepAccidentPixelSource(ScenePixelSource):
         pixel_data_config.load_dynamic_mask = False
         logger.info("[Pixel] Overriding load_dynamic_mask to False")
         super().__init__(pixel_data_config, device=device)
-
         self.data_path = data_path
         self.meta_file_path = meta_file_path
         self.start_timestep = start_timestep
@@ -47,249 +48,130 @@ class DeepAccidentPixelSource(ScenePixelSource):
         self.scene_idx = scene_idx
         self.meta_dict = self.create_or_load_metas()
         self.create_all_filelist()
-
         self.load_data()
-
 
     def create_or_load_metas(self):
         # ---- define camera list ---- #
-        # ---- define camera list ---- #
-        #if self.num_cams == 1:
-         #   self.camera_list = ["CAM_FRONT"]
-        #elif self.num_cams == 3:
-         #   self.camera_list = ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT"]
-        if self.num_cams == 6:
+        if self.num_cams == 1:
+            self.camera_list = ["CAM_FRONT"]
+        elif self.num_cams == 3:
+            self.camera_list = ["CAM_FRONT_LEFT",
+                "CAM_FRONT",
+                "CAM_FRONT_RIGHT"]
+        elif self.num_cams == 6:
             self.camera_list = [
-                "Camera_FrontLeft",
-                "Camera_Front",
-                "Camera_FrontRight",
-                "Camera_BackLeft",
-                "Camera_Back",
-                "Camera_BackRight",
+                "CAM_FRONT_LEFT",
+                "CAM_FRONT",
+                "CAM_FRONT_RIGHT",
+                "CAM_BACK_LEFT",
+                "CAM_BACK",
+                "CAM_BACK_RIGHT",
             ]
         else:
             raise NotImplementedError(
                 f"num_cams: {self.num_cams} not supported for nuscenes dataset"
             )
 
-
-        data_raw = pickle.load(open(self.meta_file_path, 'rb'))
-
-        """if os.path.exists(self.meta_file_path):
-            with open("/home/uchihadj/EmerNeRF/old_meta_dict_deepaccident/sample_new_deepaccident.json", "r") as f:
+        if os.path.exists(self.meta_file_path):
+            with open(self.meta_file_path, "r") as f:
                 meta_dict = json.load(f)
             logger.info(f"[Pixel] Loaded camera meta from {self.meta_file_path}")
-            return meta_dict"""
+            return meta_dict
+        else:
+            logger.info(f"[Pixel] Creating camera meta at {self.meta_file_path}")
 
-        self.data_info_all = {}
-        data_infos = []
-        for data in data_raw['infos']:
-            key_name = data['scene_name'] + '_' + data['vehicle_name'] + '_' + str(data['timestamp'])
-            self.data_info_all[key_name] = data
+        if self.nusc is None:
+            self.nusc = NuScenes(
+                version="v1.0-mini", dataroot=self.data_path, verbose=True
+            )
+            #self.scene = self.nusc.scene[self.scene_idx]
+            self.scene = self.nusc.scene[self.scene_idx]
+            #self.scene = self.scene[0]
+        total_camera_list = [
+            "CAM_FRONT_LEFT",
+            "CAM_FRONT",
+            "CAM_FRONT_RIGHT",
+            "CAM_BACK_LEFT",
+            "CAM_BACK",
+            "CAM_BACK_RIGHT",
+        ]
 
-            if ((data['scenario_length'] - data['timestamp']) <= 4 * 5) and (
-                    (data['scenario_length'] - data['timestamp']) > 0) \
-                    and 'accident' in data['scene_name']:
-                data_infos.append(data)
-                data_infos = list(
-                sorted(data_infos, key=lambda x: (x['scene_name'], x['vehicle_name'], x['timestamp']), reverse=False))
-                data_infos = data_infos[:50]
-
-
-        # Initialize the meta_dict
         meta_dict = {
-            "Camera_FrontLeft": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
-                               "intrinsics": []},
-            "Camera_Front": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
-                          "intrinsics": []},
-            "Camera_FrontRight": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
-                                "intrinsics": []},
-            "Camera_BackLeft": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
-                              "intrinsics": []},
-            "Camera_Back": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
-                         "intrinsics": []},
-            "Camera_BackRight": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
-                               "intrinsics": []}
+            camera: {
+                "timestamp": [],
+                "filepath": [],
+                "ego_pose": [],
+                "cam_id": [],
+                "extrinsics": [],
+                "intrinsics": [],
+            }
+            for i, camera in enumerate(total_camera_list)
         }
-        #meta_dict["CAMERA_FRONTLEFT"]['timestamp'].append(img_infos["Camera_FrontLe"])
 
+        # ---- get the first sample of each camera ---- #
+        current_camera_data_tokens = {camera: None for camera in total_camera_list}
+        first_sample = self.nusc.get("sample", self.scene["first_sample_token"])
+        for camera in total_camera_list:
+            current_camera_data_tokens[camera] = first_sample["data"][camera]
 
-        # Map camera names to IDs
-        camera_id_mapping = {
-            "Camera_FrontLeft": 0,
-            "Camera_Front": 1,
-            "Camera_FrontRight": 2,
-            "Camera_BackLeft": 3,
-            "Camera_Back": 4,
-            "Camera_BackRight": 5
-        }
-        # ---- find the minimum shared scene length ---- #
-        #info = self.data_infos
+        while not all(token == "" for token in current_camera_data_tokens.values()):
+            for i, camera in enumerate(total_camera_list):
+                # skip if the current camera data token is empty
+                if current_camera_data_tokens[camera] == "":
+                    continue
 
-        for i in range(len(data_infos)):
+                current_camera_data = self.nusc.get(
+                    "sample_data", current_camera_data_tokens[camera]
+                )
 
-            info = data_infos[i]
+                # ---- timestamp and cam_id ---- #
+                meta_dict[camera]["cam_id"].append(i)
+                meta_dict[camera]["timestamp"].append(current_camera_data["timestamp"])
+                meta_dict[camera]["filepath"].append(current_camera_data["filename"])
 
-            print("just one info", info)
-            img_infos = []
-            img_infos.append(info['cams'])
+                # ---- intrinsics and extrinsics ---- #
+                calibrated_sensor_record = self.nusc.get(
+                    "calibrated_sensor", current_camera_data["calibrated_sensor_token"]
+                )
+                # intrinsics
+                intrinsic = calibrated_sensor_record["camera_intrinsic"]
+                meta_dict[camera]["intrinsics"].append(np.array(intrinsic))
 
-            print(camera_id_mapping['Camera_FrontLeft'])
-            ########################################################################
-            """Parse all the camera detials to meta_dict"""
-            ########################################################################
-            meta_dict["Camera_FrontLeft"]['timestamp'].append(img_infos[0]["Camera_FrontLeft"]["timestamp"])
-            meta_dict["Camera_FrontLeft"]["filepath"].append(img_infos[0]["Camera_FrontLeft"]["image_path"])
-            meta_dict["Camera_FrontLeft"]['ego_pose'].append(info['ego_to_world_matrix'])
-            meta_dict["Camera_FrontLeft"]['cam_id'].append(camera_id_mapping['Camera_FrontLeft'])
-            meta_dict["Camera_FrontLeft"]['intrinsics'].append(
-                img_infos[0]["Camera_FrontLeft"]["camera_intrinsic_matrix"])
-            # check for camera visisblity is
-            # meta_dict["Camera_FrontLef"]['kind_of_cam_id'].append(info['camera_visibility'])
-            #compute extrinsics
-            e2g_trans_matrix = np.zeros((4, 4), dtype=np.float32)
-            ego_matrix = info['ego_to_world_matrix']
-            e2g_trans = ego_matrix[:3, 3]
-            e2g_rot = ego_matrix[:3, :3]
-            # Perform SVD to ensure orthogonality
-            u, _, v_transposed = np.linalg.svd(e2g_rot)
+                # extrinsics
+                extrinsic = np.eye(4)
+                extrinsic[:3, :3] = Quaternion(
+                    calibrated_sensor_record["rotation"]
+                ).rotation_matrix
+                extrinsic[:3, 3] = np.array(calibrated_sensor_record["translation"])
+                meta_dict[camera]["extrinsics"].append(extrinsic)
 
-            # Construct an orthogonal rotation matrix
-            e2g_rot_orthogonal = u @ v_transposed
+                # ---- ego pose ---- #
+                ego_pose_record = self.nusc.get(
+                    "ego_pose", current_camera_data["ego_pose_token"]
+                )
+                ego_pose = np.eye(4)
+                ego_pose[:3, :3] = Quaternion(
+                    ego_pose_record["rotation"]
+                ).rotation_matrix
+                ego_pose[:3, 3] = np.array(ego_pose_record["translation"])
+                meta_dict[camera]["ego_pose"].append(ego_pose)
 
-            # Convert the rotation matrix to a quaternion
-            quaternion = pyquaternion.Quaternion(matrix=e2g_rot_orthogonal)
+                current_camera_data_tokens[camera] = current_camera_data["next"]
 
-            # Initialize the transformation matrix
-            e2g_trans_matrix = quaternion.transformation_matrix
+        print('meta_dict', meta_dict)
 
-            # Set the translation part of the transformation matrix
-            e2g_trans_matrix[:3, 3] = np.array(e2g_trans)
-
-            # Print the resulting transformation matrix
-            print(e2g_trans_matrix)
-
-            """# Check and adjust orthogonality
-            is_orthogonal = np.allclose(np.dot(e2g_rot, e2g_rot.T), np.eye(3))
-            if not is_orthogonal:
-                # Orthonormalize using Gram-Schmidt
-                for i in range(3):
-                    e2g_rot[:, i] /= np.linalg.norm(e2g_rot[:, i])
-
-            # Convert rotation matrix to quaternion
-            quaternion = pyquaternion.Quaternion(matrix=e2g_rot)
-
-            # Set the rotation part of the transformation matrix
-            e2g_trans_matrix[:3, :3] = quaternion.rotation_matrix
-
-            # Set the translation part of the transformation matrix
-            e2g_trans_matrix[:3, 3] = np.array(e2g_trans)
-
-            # Set the homogeneous coordinate
-            e2g_trans_matrix[3, 3] = 1.0
-
-            print(e2g_trans_matrix)"""
-
-
-            """ego_matrix = info['ego_to_world_matrix']
-            e2g_trans = ego_matrix[:3, 3]
-            e2g_rot = ego_matrix[:3, :3]
-            # Convert rotation matrix to quaternion
-            quaternion = pyquaternion.Quaternion(matrix=e2g_rot)
-
-            # Set the rotation part of the transformation matrix
-            e2g_trans_matrix[:3, :3] = quaternion.rotation_matrix
-
-            # Set the translation part of the transformation matrix
-            e2g_trans_matrix[:3, 3] = np.array(e2g_trans)
-
-            # Set the homogeneous coordinate
-            #e2g_trans_matrix[3, 3] = 1.0
-
-            print(e2g_trans_matrix)"""
-
-            #e2g_rot = info['ego2global_rotation']
-            #e2g_trans = info['ego2global_translation']
-            #e2g_trans_matrix[:3, :3] = pyquaternion.Quaternion(
-             #   e2g_rot).rotation_matrix
-            #e2g_trans_matrix[:3, 3] = np.array(e2g_trans)
-            #e2g_trans_matrix[3, 3] = 1.0
-            #print(e2g_trans_matrix)
-            #old_function for extrinsics
-            #meta_dict["Camera_FrontLeft"]['extrinsics'].append(info["lidar_to_ego_matrix"])
-            meta_dict["Camera_FrontLeft"]['extrinsics'].append(e2g_trans_matrix)
-
-            # second camera
-            meta_dict["Camera_Front"]['timestamp'].append(img_infos[0]["Camera_Front"]["timestamp"])
-            meta_dict["Camera_Front"]["filepath"].append(img_infos[0]["Camera_Front"]["image_path"])
-            meta_dict["Camera_Front"]['ego_pose'].append(info['ego_to_world_matrix'])
-            meta_dict["Camera_Front"]['cam_id'].append(camera_id_mapping['Camera_Front'])
-            meta_dict["Camera_Front"]['intrinsics'].append(img_infos[0]["Camera_Front"]["camera_intrinsic_matrix"])
-            # check for camera visisblity is
-            # meta_dict["Camera_FrontLef"]['kind_of_cam_id'].append(info['camera_visibility'])
-            #meta_dict["Camera_Front"]['extrinsics'].append(info["lidar_to_ego_matrix"])
-            meta_dict["Camera_Front"]['extrinsics'].append(e2g_trans_matrix)
-            # third camera
-            meta_dict["Camera_FrontRight"]['timestamp'].append(img_infos[0]["Camera_FrontRight"]["timestamp"])
-            meta_dict["Camera_FrontRight"]["filepath"].append(img_infos[0]["Camera_FrontRight"]["image_path"])
-            meta_dict["Camera_FrontRight"]['ego_pose'].append(info['ego_to_world_matrix'])
-            meta_dict["Camera_FrontRight"]['cam_id'].append(camera_id_mapping['Camera_FrontRight'])
-            meta_dict["Camera_FrontRight"]['intrinsics'].append(
-                img_infos[0]["Camera_FrontRight"]["camera_intrinsic_matrix"])
-            # check for camera visisblity is
-            # meta_dict["Camera_FrontLef"]['kind_of_cam_id'].append(info['camera_visibility'])
-            #meta_dict["Camera_FrontRight"]['extrinsics'].append(info["lidar_to_ego_matrix"])
-            meta_dict["Camera_FrontRight"]['extrinsics'].append(e2g_trans_matrix)
-            # fourth_camera
-            meta_dict["Camera_BackLeft"]['timestamp'].append(img_infos[0]["Camera_BackLeft"]["timestamp"])
-            meta_dict["Camera_BackLeft"]["filepath"].append(img_infos[0]["Camera_BackLeft"]["image_path"])
-            meta_dict["Camera_BackLeft"]['ego_pose'].append(info['ego_to_world_matrix'])
-            meta_dict["Camera_BackLeft"]['cam_id'].append(camera_id_mapping['Camera_BackLeft'])
-            meta_dict["Camera_BackLeft"]['intrinsics'].append(
-                img_infos[0]["Camera_BackLeft"]["camera_intrinsic_matrix"])
-            # check for camera visisblity is
-            # meta_dict["Camera_FrontLef"]['kind_of_cam_id'].append(info['camera_visibility'])
-            #meta_dict["Camera_BackLeft"]['extrinsics'].append(info["lidar_to_ego_matrix"])
-            meta_dict["Camera_BackLeft"]['extrinsics'].append(e2g_trans_matrix)
-
-            # fifth_camera
-            meta_dict["Camera_Back"]['timestamp'].append(img_infos[0]["Camera_Back"]["timestamp"])
-            meta_dict["Camera_Back"]["filepath"].append(img_infos[0]["Camera_Back"]["image_path"])
-            meta_dict["Camera_Back"]['ego_pose'].append(info['ego_to_world_matrix'])
-            meta_dict["Camera_Back"]['cam_id'].append(camera_id_mapping['Camera_Back'])
-            meta_dict["Camera_Back"]['intrinsics'].append(img_infos[0]["Camera_Back"]["camera_intrinsic_matrix"])
-            # check for camera visisblity is
-            # meta_dict["Camera_FrontLef"]['kind_of_cam_id'].append(info['camera_visibility'])
-            #meta_dict["Camera_Back"]['extrinsics'].append(info["lidar_to_ego_matrix"])
-            meta_dict["Camera_Back"]['extrinsics'].append(e2g_trans_matrix)
-            # sxcth_camera
-            meta_dict["Camera_BackRight"]['timestamp'].append(img_infos[0]["Camera_BackRight"]["timestamp"])
-            meta_dict["Camera_BackRight"]["filepath"].append(img_infos[0]["Camera_BackRight"]["image_path"])
-            meta_dict["Camera_BackRight"]['ego_pose'].append(info['ego_to_world_matrix'])
-            meta_dict["Camera_BackRight"]['cam_id'].append(camera_id_mapping['Camera_BackRight'])
-            meta_dict["Camera_BackRight"]['intrinsics'].append(
-                img_infos[0]["Camera_BackRight"]["camera_intrinsic_matrix"])
-            # check for camera visisblity is
-            # meta_dict["Camera_FrontLef"]['kind_of_cam_id'].append(info['camera_visibility'])
-            #meta_dict["Camera_BackRight"]['extrinsics'].append(info["lidar_to_ego_matrix"])
-            meta_dict["Camera_BackRight"]['extrinsics'].append(e2g_trans_matrix)
-
-        #print(meta_dict)
-
-        #with open("sample_new_deepaccident.json", "w") as outfile:
-         #   json.dump(meta_dict, outfile, cls=NumpyEncoder)
-        #logger.info(f"[Pixel] Saved camera meta to {self.meta_file_path}")
-
-
+        with open(self.meta_file_path, "w") as f:
+            json.dump(meta_dict, f, cls=NumpyEncoder)
+        logger.info(f"[Pixel] Saved camera meta to {self.meta_file_path}")
 
         return meta_dict
-
 
     def create_all_filelist(self):
         # NuScenes dataset is not synchronized, so we need to find the minimum shared
         # scene length, and only use the frames within the shared scene length.
         # we also define the start and end timestep within the shared scene length
 
+        # ---- find the minimum shared scene length ---- #
         num_timestamps = 100000000
         for camera in self.camera_list:
             if len(self.meta_dict[camera]["timestamp"]) < num_timestamps:
@@ -343,18 +225,13 @@ class DeepAccidentPixelSource(ScenePixelSource):
 
         # we tranform the camera poses w.r.t. the first timestep to make the origin of
         # the first ego pose  as the origin of the world coordinate system.
-        initial_ego_to_global = self.meta_dict["Camera_Front"]["ego_pose"][
+        initial_ego_to_global = self.meta_dict["CAM_FRONT"]["ego_pose"][
             self.start_timestep
         ]
         global_to_initial_ego = np.linalg.inv(initial_ego_to_global)
 
         for t in range(self.start_timestep, self.end_timestep):
-
-            """
-            Ego to world coordinate system for deep accident
-            """
-
-            ego_to_global_current = self.meta_dict["Camera_Front"]["ego_pose"][t]
+            ego_to_global_current = self.meta_dict["CAM_FRONT"]["ego_pose"][t]
             # compute ego_to_world transformation
             ego_to_world = global_to_initial_ego @ ego_to_global_current
             ego_to_worlds.append(ego_to_world)
@@ -393,7 +270,6 @@ class DeepAccidentPixelSource(ScenePixelSource):
         )
 
         self.cam_to_worlds = torch.from_numpy(np.stack(cam_to_worlds, axis=0)).float()
-        #self.cam_to_worlds = None
         self.ego_to_worlds = torch.from_numpy(np.stack(ego_to_worlds, axis=0)).float()
         self.global_to_initial_ego = torch.from_numpy(global_to_initial_ego).float()
         self.cam_ids = torch.from_numpy(np.stack(cam_ids, axis=0)).long()
@@ -401,12 +277,213 @@ class DeepAccidentPixelSource(ScenePixelSource):
         # the underscore here is important.
         self._timestamps = torch.tensor(timestamps, dtype=torch.float64)
         self._timesteps = torch.from_numpy(np.stack(timesteps, axis=0)).long()
-        """
-        until here workin but values are different such AS global to worlds scene lenthg and time stap
-        """
 
 
-class DeepaccidentDataset(SceneDataset):
+class NuScenesLiDARSource(SceneLidarSource):
+    def __init__(
+        self,
+        lidar_data_config: OmegaConf,
+        data_path: str,
+        meta_file_path: str,
+        nusc: NuScenes,
+        scene_idx: int,
+        start_timestep: int,
+        fraction: float,  # a value in [0, 1] to indicate the fraction of the scene to use
+        global_to_initial_ego: Tensor,
+    ):
+        super().__init__(lidar_data_config)
+        self.data_path = data_path
+        self.meta_file_path = meta_file_path
+        self.nusc = nusc
+        self.scene_idx = scene_idx
+        self.start_timestep = start_timestep
+        # because the lidar data is not synchronized with the image data, we need to
+        # define the end timestep based on the fraction of the scene to use
+        self.fraction = fraction
+        self.global_to_initial_ego = global_to_initial_ego.numpy()
+        self.meta_dict = self.create_or_load_metas()
+        self.create_all_filelist()
+        self.load_data()
+
+    def create_or_load_metas(self):
+        if os.path.exists(self.meta_file_path):
+            with open(self.meta_file_path, "r") as f:
+                meta_dict = json.load(f)
+            logger.info(f"[Lidar] Loaded lidar meta from {self.meta_file_path}")
+            return meta_dict
+        else:
+            logger.info(f"[Lidar] Creating lidar meta at {self.meta_file_path}")
+
+        if self.nusc is None:
+            self.nusc = NuScenes(
+                version="v1.0-mini", dataroot=self.data_path, verbose=True
+            )
+        self.scene = self.nusc.scene[self.scene_idx]
+
+        meta_dict = {
+            "timestamp": [],
+            "filepath": [],
+            "extrinsics": [],
+            "ego_pose": [],
+        }
+
+        # ---- obtain initial pose ---- #
+        first_sample = self.nusc.get("sample", self.scene["first_sample_token"])
+        current_data_token = first_sample["data"]["LIDAR_TOP"]
+
+        while current_data_token != "":
+            current_lidar_data = self.nusc.get("sample_data", current_data_token)
+            # ---- timestamp and cam_id ---- #
+            meta_dict["timestamp"].append(current_lidar_data["timestamp"])
+            meta_dict["filepath"].append(current_lidar_data["filename"])
+
+            # ---- extrinsics ---- #
+            calibrated_sensor_record = self.nusc.get(
+                "calibrated_sensor", current_lidar_data["calibrated_sensor_token"]
+            )
+            extrinsic = np.eye(4)
+            extrinsic[:3, :3] = Quaternion(
+                calibrated_sensor_record["rotation"]
+            ).rotation_matrix
+            extrinsic[:3, 3] = np.array(calibrated_sensor_record["translation"])
+            meta_dict["extrinsics"].append(extrinsic)
+
+            # ---- ego pose ---- #
+            ego_pose_record = self.nusc.get(
+                "ego_pose", current_lidar_data["ego_pose_token"]
+            )
+            ego_pose = np.eye(4)
+            ego_pose[:3, :3] = Quaternion(ego_pose_record["rotation"]).rotation_matrix
+            ego_pose[:3, 3] = np.array(ego_pose_record["translation"])
+            meta_dict["ego_pose"].append(ego_pose)
+            current_data_token = current_lidar_data["next"]
+
+        with open(self.meta_file_path, "w") as f:
+            json.dump(meta_dict, f, cls=NumpyEncoder)
+        logger.info(f"[Lidar] Saved lidar meta to {self.meta_file_path}")
+        return meta_dict
+
+    def create_all_filelist(self):
+        # ---- define filepaths ---- #
+        num_timestamps = len(self.meta_dict["timestamp"])
+        self.end_timestep = int(num_timestamps * self.fraction)
+
+        self.start_timestep = min(self.start_timestep, self.end_timestep - 1)
+
+        logger.info(f"[Lidar] Start timestep: {self.start_timestep}")
+        logger.info(f"[Lidar] End timestep: {self.end_timestep}")
+
+        lidar_filepaths = []
+        for t in range(self.start_timestep, self.end_timestep):
+            lidar_filepaths.append(
+                os.path.join(self.data_path, self.meta_dict["filepath"][t])
+            )
+        self.lidar_filepaths = np.array(lidar_filepaths)
+
+    def load_calibrations(self):
+        lidar_to_worlds, ego_to_worlds = [], []
+        # we tranform the poses w.r.t. the first timestep to make the origin of the
+        # first ego pose as the origin of the world coordinate system.
+        for t in range(self.start_timestep, self.end_timestep):
+            lidar_to_ego = np.array(self.meta_dict["extrinsics"][t])
+            ego_to_global_current = np.array(self.meta_dict["ego_pose"][t])
+            # compute ego_to_world transformation
+            ego_to_world = self.global_to_initial_ego @ ego_to_global_current
+            ego_to_worlds.append(ego_to_world)
+            lidar_to_worlds.append(ego_to_world @ lidar_to_ego)
+        self.lidar_to_worlds = torch.from_numpy(
+            np.stack(lidar_to_worlds, axis=0)
+        ).float()
+        self.ego_to_worlds = torch.from_numpy(np.stack(ego_to_worlds, axis=0)).float()
+
+    def load_lidar(self):
+        origins, directions, ranges, timesteps = [], [], [], []
+        laser_ids = []
+        timestamps = []
+
+        accumulated_num_original_rays = 0
+        accumulated_num_rays = 0
+        for t in trange(
+            0, len(self.lidar_filepaths), desc="Loading lidar", dynamic_ncols=True
+        ):
+            lidar_pc = LidarPointCloud.from_file(self.lidar_filepaths[t])
+            lidar_pc.remove_close(1.0)
+            pc = lidar_pc.points[:3, :].T
+            pc = np.hstack((pc, np.ones((pc.shape[0], 1))))
+            pc = torch.from_numpy(pc).float()
+            lidar_points = pc @ self.lidar_to_worlds[t].T
+            lidar_points = lidar_points[:, :3]
+            lidar_origins = (
+                self.lidar_to_worlds[t][:3, 3]
+                .unsqueeze(0)
+                .repeat(lidar_points.shape[0], 1)
+            )
+            lidar_directions = lidar_points - lidar_origins
+            lidar_ranges = torch.norm(lidar_directions, dim=-1, keepdim=True)
+            lidar_directions = lidar_directions / lidar_ranges
+            accumulated_num_original_rays += len(lidar_pc.points[0])
+
+            valid_mask = torch.ones_like(lidar_origins[:, 0]).bool()
+            if self.data_cfg.truncated_max_range is not None:
+                valid_mask = lidar_points[:, 0] < self.data_cfg.truncated_max_range
+            if self.data_cfg.truncated_min_range is not None:
+                valid_mask = valid_mask & (
+                    lidar_points[:, 0] > self.data_cfg.truncated_min_range
+                )
+            lidar_origins = lidar_origins[valid_mask]
+            lidar_directions = lidar_directions[valid_mask]
+            lidar_ranges = lidar_ranges[valid_mask]
+            lidar_timestep = torch.ones_like(lidar_ranges).squeeze(-1) * t
+            lidar_ids = torch.zeros_like(lidar_origins[:, 0]).long()
+            accumulated_num_rays += len(lidar_ranges)
+            origins.append(lidar_origins)
+            directions.append(lidar_directions)
+            ranges.append(lidar_ranges)
+            timesteps.append(lidar_timestep)
+            laser_ids.append(lidar_ids)
+            timestamps.append(
+                self.meta_dict["timestamp"][t]
+                / 1e6
+                * torch.ones_like(lidar_ids, dtype=torch.float64)
+            )
+
+        logger.info(
+            f"[Lidar] Number of lidar rays: {accumulated_num_rays} "
+            f"({accumulated_num_rays / accumulated_num_original_rays * 100:.2f}%) of "
+            f"{accumulated_num_original_rays} original rays)"
+        )
+        logger.info("[Lidar] Filter condition:")
+        logger.info(f"  only_use_top_lidar: {self.data_cfg.only_use_top_lidar}")
+        logger.info(f"  truncated_max_range: {self.data_cfg.truncated_max_range}")
+        logger.info(f"  truncated_min_range: {self.data_cfg.truncated_min_range}")
+
+        self.origins = torch.cat(origins, dim=0)
+        self.directions = torch.cat(directions, dim=0)
+        self.ranges = torch.cat(ranges, dim=0)
+        self._timesteps = torch.cat(timesteps, dim=0)
+        self.laser_ids = torch.cat(laser_ids, dim=0)
+        self._timestamps = torch.cat(timestamps, dim=0)
+
+    def sample_uniform_rays(
+        self,
+        num_rays: int,
+        candidate_indices: Tensor = None,
+    ):
+        # in nuscenes, we don't support novel view synthesis yet, so we don't need to
+        # use candidate indices
+        self.cached_origins = self.origins
+        self.cached_directions = self.directions
+        self.cached_ranges = self.ranges
+        self.cached_normalized_timestamps = self.normalized_timestamps
+        return torch.randint(
+            0,
+            len(self.cached_origins),
+            size=(num_rays,),
+            device=self.device,
+        )
+
+
+class NuScenesDataset(SceneDataset):
     dataset: str = "nuscenes"
 
     def __init__(
@@ -414,8 +491,19 @@ class DeepaccidentDataset(SceneDataset):
         data_cfg: OmegaConf,
     ) -> None:
         super().__init__(data_cfg)
-        assert self.data_cfg.dataset == "deepaccident"
+        assert self.data_cfg.dataset == "nuscenes"
         self.data_path = self.data_cfg.data_root
+        self.processed_data_path = os.path.join(
+            self.data_path, "emernerf_metas", f"{self.scene_idx:03d}"
+        )
+        if not os.path.exists(self.processed_data_path):
+            os.makedirs(self.processed_data_path)
+        self.img_meta_file_path = os.path.join(
+            self.processed_data_path, "img_meta.json"
+        )
+        self.lidar_meta_file_path = os.path.join(
+            self.processed_data_path, "lidar_meta.json"
+        )
 
         # ---- create pixel source ---- #
         self.pixel_source, self.lidar_source = self.build_data_source()
@@ -491,11 +579,11 @@ class DeepaccidentDataset(SceneDataset):
             or self.data_cfg.pixel_source.load_feature
         )
         if load_pixel:
-            pixel_source = DeepAccidentPixelSource(
+            pixel_source = NuScenesPixelSource(
                 pixel_data_config=self.data_cfg.pixel_source,
                 data_path=self.data_path,
                 scene_idx=self.scene_idx,
-                meta_file_path= self.data_cfg.img_meta_file_path,
+                meta_file_path=self.img_meta_file_path,
                 start_timestep=self.data_cfg.start_timestep,
                 end_timestep=self.data_cfg.end_timestep,
             )
@@ -506,7 +594,7 @@ class DeepaccidentDataset(SceneDataset):
             self.scene_fraction = pixel_source.scene_fraction
         # ---- create lidar source ---- #
         if self.data_cfg.lidar_source.load_lidar:
-            lidar_source = DeepAccidentPixelSource(
+            lidar_source = NuScenesLiDARSource(
                 lidar_data_config=self.data_cfg.lidar_source,
                 data_path=self.data_path,
                 meta_file_path=self.lidar_meta_file_path,
@@ -574,7 +662,6 @@ class DeepaccidentDataset(SceneDataset):
 
         return train_timesteps, test_timesteps, train_indices, test_indices
 
-
     def save_videos(self, video_dict, **kwargs):
         return save_videos(
             render_results=video_dict,
@@ -585,7 +672,6 @@ class DeepaccidentDataset(SceneDataset):
             fps=kwargs["fps"],
             verbose=kwargs["verbose"],
         )
-
 
     def render_data_videos(
         self,
@@ -706,50 +792,11 @@ class DeepaccidentDataset(SceneDataset):
             verbose=verbose,
         )
 
-################################Rosugh code ################
-
-""" 
-       total_camera_list = [
-            "Camera_FrontLeft",
-            "Camera_Front",
-            "Camera_FrontRight",
-            "Camera_BackLeft",
-            "Camera_Back",
-            "Camera_BackRight",
-        ]
-
-        meta_dict = {
-            camera: {
-                "timestamp": [],
-                "filepath": [],
-                "ego_pose": [],
-                "cam_id": [],
-                "extrinsics": [],
-                "intrinsics": [],
-            }
-            for i, camera in enumerate(total_camera_list)
-        }
-        current_camera_data_tokens = {camera: None for camera in total_camera_list}
-        first_sample = self.nusc.get("sample", self.scene["first_sample_token"])
-
-        # Get the first info
-
-
-        # Populate meta_dict with data from each camera
-        for i, camera in enumerate(total_camera_list):
-            camera_info = info["cams"][camera]
-
-            meta_dict[camera]["cam_id"].append(i)
-            meta_dict[camera]["timestamp"].append(camera_info["timestamp"])
-            meta_dict[camera]["filepath"].append(camera_info["image_path"])
-
-            # Adjust the following based on your actual data structure
-            extrinsic = camera_info["lidar_to_camera_matrix"]
-            intrinsic = camera_info["camera_intrinsic_matrix"]
-
-            meta_dict[camera]["extrinsics"].append(extrinsic)
-            meta_dict[camera]["intrinsics"].append(intrinsic)
-
-        # Now 'meta_dict' contains the information you need for the first info
-        print("================================", meta_dict)
-"""
+    @property
+    def unique_normalized_training_timestamps(self):
+        # overwrite this.
+        normalized_t = (
+            torch.arange(self.pixel_source.num_timesteps, dtype=torch.float32)
+            / self.pixel_source.num_timesteps
+        )
+        return normalized_t[self.train_timesteps]

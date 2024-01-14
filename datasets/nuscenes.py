@@ -55,25 +55,32 @@ class NuScenesPixelSource(ScenePixelSource):
         if self.num_cams == 1:
             self.camera_list = ["CAM_FRONT"]
         elif self.num_cams == 3:
-            self.camera_list = ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT"]
+            self.camera_list = ["Camera_FrontLeft",
+                "Camera_Front",
+                "Camera_FrontRight"]
         elif self.num_cams == 6:
             self.camera_list = [
-                "CAM_FRONT_LEFT",
-                "CAM_FRONT",
-                "CAM_FRONT_RIGHT",
-                "CAM_BACK_LEFT",
-                "CAM_BACK",
-                "CAM_BACK_RIGHT",
+                 "Camera_FrontLeft",
+                "Camera_Front",
+                "Camera_FrontRight",
+                "Camera_BackLeft",
+                "Camera_Back",
+                "Camera_BackRight",
             ]
         else:
             raise NotImplementedError(
                 f"num_cams: {self.num_cams} not supported for nuscenes dataset"
             )
 
-        if os.path.exists(self.meta_file_path):
+        """if os.path.exists(self.meta_file_path):
             with open(self.meta_file_path, "r") as f:
                 meta_dict = json.load(f)
             logger.info(f"[Pixel] Loaded camera meta from {self.meta_file_path}")
+            return meta_dict"""
+        if os.path.exists("/home/uchihadj/EmerNeRF/datasets/v2x_ego_vehicle.json"):
+            with open("/home/uchihadj/EmerNeRF/datasets/v2x_ego_vehicle.json", "r") as f:
+                meta_dict = json.load(f)
+            logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/v2x_ego_vehicle.json")
             return meta_dict
         else:
             logger.info(f"[Pixel] Creating camera meta at {self.meta_file_path}")
@@ -86,12 +93,12 @@ class NuScenesPixelSource(ScenePixelSource):
             self.scene = self.nusc.scene[self.scene_idx]
             #self.scene = self.scene[0]
         total_camera_list = [
-            "CAM_FRONT_LEFT",
-            "CAM_FRONT",
-            "CAM_FRONT_RIGHT",
-            "CAM_BACK_LEFT",
-            "CAM_BACK",
-            "CAM_BACK_RIGHT",
+            "Camera_FrontLeft",
+                "Camera_Front",
+                "Camera_FrontRight",
+                "Camera_BackLeft",
+                "Camera_Back",
+                "Camera_BackRight",
         ]
 
         meta_dict = {
@@ -223,13 +230,13 @@ class NuScenesPixelSource(ScenePixelSource):
 
         # we tranform the camera poses w.r.t. the first timestep to make the origin of
         # the first ego pose  as the origin of the world coordinate system.
-        initial_ego_to_global = self.meta_dict["CAM_FRONT"]["ego_pose"][
+        initial_ego_to_global = self.meta_dict["Camera_Front"]["ego_pose"][
             self.start_timestep
         ]
         global_to_initial_ego = np.linalg.inv(initial_ego_to_global)
 
         for t in range(self.start_timestep, self.end_timestep):
-            ego_to_global_current = self.meta_dict["CAM_FRONT"]["ego_pose"][t]
+            ego_to_global_current = self.meta_dict["Camera_Front"]["ego_pose"][t]
             # compute ego_to_world transformation
             ego_to_world = global_to_initial_ego @ ego_to_global_current
             ego_to_worlds.append(ego_to_world)
@@ -496,9 +503,9 @@ class NuScenesDataset(SceneDataset):
         )
         if not os.path.exists(self.processed_data_path):
             os.makedirs(self.processed_data_path)
-        self.img_meta_file_path = os.path.join(
-            self.processed_data_path, "img_meta.json"
-        )
+        self.img_meta_file_path = "/home/uchihadj/EmerNeRF/datasets/v2x_ego_vehicle.json"#os.path.join(
+            #self.processed_data_path, "img_meta.json"
+        #)
         self.lidar_meta_file_path = os.path.join(
             self.processed_data_path, "lidar_meta.json"
         )

@@ -41,7 +41,27 @@
     logging.saveckpt_freq=25000 \
     optim.num_iters= 25000
     -------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    python train_emernerf.py \
+    --config_file configs/default_dynamic.yaml \
+    --project v2x_emernerf \
+    --run_name  full_check \
+    data.data_root="/home/uchihadj/DeepAccident/data/DeepAccident_data " \  # set the data root
+    data.dataset="nuscenes" \         # set the dataset
+    data.pixel_source.num_cams=6 \    # set the number of cameras, 1, 3, or 6
+    data.pixel_source.load_size=[450,800] \  # set the image size
+    data.pixel_source.skip_feature_extraction=True \ # set to True if you want to skip feature extraction
+    data.pixel_source.load_features=True \ # set to True if you want to load features
+    data.pixel_source.feature_model_type=dinov2_vitb14 \ # set the feature model type
+    data.lidar_source.truncated_min_range=-60 \ # IMPORTANT because our default setting is -2.
+    data.start_timestep=0 \
+    data.end_timestep=100 \
+    nerf.model.head.enable_feature_head=True \
+    logging.saveckpt_freq=25000 \
+    optim.num_iters= 25000
+
+
     ........................------------------------------------------------------------------------------------------------
+
     -
     deepaccident
     -----------------------------------------------------------------------------------
