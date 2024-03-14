@@ -74,3 +74,15 @@
 ###########################
 pixel_source is the rror where view_dirs and intrinsic are not in proper shaüe
 line 792
+--------------------------------------------------------------------------------------------------------------------------------------------------
+TUMTraf Feature Lifting use "nuscenes defualt config" - Changes are recorded there
+--------------------------------------------------------------------------------------------------------------------------------------------
+Date:March 14th - Until Feature comparision working
+Debugger arguments - --config_file
+configs/default_flow.yaml
+--project
+tum_traf
+--run_name
+tum_traf_v2x_feature_run_2
+--render_data_video
+

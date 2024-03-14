@@ -54,7 +54,7 @@ def get_rays(
         intrinsic = intrinsic[None, :, :]
     if len(c2w.shape) == 2:
         c2w = c2w[None, :, :]
-    # Create a transformation matrix to convert the deep accident intrinsic to the desired format
+    """    # Create a transformation matrix to convert the deep accident intrinsic to the desired format
     # Create a transformation matrix to convert the deep accident intrinsic to the desired format
     transformation_matrix = torch.tensor([[1.0, 0.0, 0.0],
                                           [0.0, -1.0, 0.0],
@@ -63,11 +63,12 @@ def get_rays(
     # Apply the transformation to the deep accident intrinsic
     intrinsic = torch.matmul(intrinsic.float(), transformation_matrix.transpose(0, 1))
     eps = 1e-6  # Small epsilon value
+    """
     camera_dirs = torch.nn.functional.pad(
         torch.stack(
             [
                 (x - intrinsic[:, 0, 2] + 0.5) / intrinsic[:, 0, 0],
-                (y - intrinsic[:, 1, 2] + 0.5) / (intrinsic[:, 1, 1] + eps),
+                (y - intrinsic[:, 1, 2] + 0.5) / intrinsic[:, 1, 1],
             ],
             dim=-1,
         ),
@@ -522,6 +523,23 @@ class ScenePixelSource(abc.ABC):
         pred_rgbs = render_results["rgbs"]
         gt_rgbs = torch.from_numpy(np.stack(gt_rgbs, axis=0))
         pred_rgbs = torch.from_numpy(np.stack(pred_rgbs, axis=0))
+        """
+        Just to visualize results, Comment out later
+        """
+        """
+        save_directory = "/home/uchihadj/EmerNeRF/work_dirs/v2x_emernerf/new_meta_dict_1"
+
+        # Ensure the directory exists or create it
+        if not os.path.exists(save_directory):
+            os.makedirs(save_directory)
+
+        # Save NumPy arrays to the specified directory
+        np.save(os.path.join(save_directory, 'gt_rgbs.npy'), gt_rgbs)
+        np.save(os.path.join(save_directory, 'pred_rgbs.npy'), pred_rgbs)
+        print("Tensors sved")
+        
+        """
+
         pixel_error_maps = torch.abs(gt_rgbs - pred_rgbs).mean(dim=-1)
         assert pixel_error_maps.shape == self.pixel_error_maps.shape
         if "dynamic_opacities" in render_results:

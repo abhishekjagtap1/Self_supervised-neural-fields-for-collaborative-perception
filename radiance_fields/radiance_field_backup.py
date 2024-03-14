@@ -19,32 +19,32 @@ logger = logging.getLogger()
 
 class RadianceField(nn.Module):
     def __init__(
-        self,
-        xyz_encoder: HashEncoder,
-        dynamic_xyz_encoder: Optional[HashEncoder] = None,
-        flow_xyz_encoder: Optional[HashEncoder] = None,
-        aabb: Union[Tensor, List[float]] = [-1, -1, -1, 1, 1, 1],
-        #aabb: Union[Tensor, List[float]] = [ -59.0768, -102.0572,   -4.9288,  244.7985,  202.3327,   20.0000],
-        num_dims: int = 3,
-        density_activation: Callable = lambda x: trunc_exp(x - 1),
-        unbounded: bool = True,
-        geometry_feature_dim: int = 15,
-        base_mlp_layer_width: int = 64,
-        head_mlp_layer_width: int = 64,
-        enable_cam_embedding: bool = False,
-        enable_img_embedding: bool = False,
-        num_cams: int = 3,
-        appearance_embedding_dim: int = 16,
-        semantic_feature_dim: int = 64,
-        feature_mlp_layer_width: int = 256,
-        feature_embedding_dim: int = 768,
-        enable_sky_head: bool = False,
-        enable_shadow_head: bool = False,
-        enable_feature_head: bool = False,
-        num_train_timesteps: int = 0,
-        interpolate_xyz_encoding: bool = False,
-        enable_learnable_pe: bool = True,
-        enable_temporal_interpolation: bool = False,
+            self,
+            xyz_encoder: HashEncoder,
+            dynamic_xyz_encoder: Optional[HashEncoder] = None,
+            flow_xyz_encoder: Optional[HashEncoder] = None,
+            aabb: Union[Tensor, List[float]] = [-1, -1, -1, 1, 1, 1],
+            # aabb: Union[Tensor, List[float]] = [ -59.0768, -102.0572,   -4.9288,  244.7985,  202.3327,   20.0000],
+            num_dims: int = 3,
+            density_activation: Callable = lambda x: trunc_exp(x - 1),
+            unbounded: bool = True,
+            geometry_feature_dim: int = 15,
+            base_mlp_layer_width: int = 64,
+            head_mlp_layer_width: int = 64,
+            enable_cam_embedding: bool = False,
+            enable_img_embedding: bool = False,
+            num_cams: int = 3,
+            appearance_embedding_dim: int = 16,
+            semantic_feature_dim: int = 64,
+            feature_mlp_layer_width: int = 256,
+            feature_embedding_dim: int = 768,
+            enable_sky_head: bool = False,
+            enable_shadow_head: bool = False,
+            enable_feature_head: bool = False,
+            num_train_timesteps: int = 0,
+            interpolate_xyz_encoding: bool = False,
+            enable_learnable_pe: bool = True,
+            enable_temporal_interpolation: bool = False,
     ) -> None:
         super().__init__()
         # scene properties
@@ -110,19 +110,6 @@ class RadianceField(nn.Module):
                 nn.Linear(base_mlp_layer_width, 6),  # 3 for forward, 3 for backward
                 # no activation function for flow
             )
-        ##=========== Feature Field - Abhi ============#
-        """
-        self.feature_xyz_encoder = feature_xyz_encoder
-        if self.feature_xyz_encoder is not None:
-            self.GN_feature_mlp = nn.Sequential(
-
-                nn.Linear(self.feature_xyz_encoder.n_output_dims, base_mlp_layer_width),
-                nn.ReLU(),
-                nn.Linear(base_mlp_layer_width, base_mlp_layer_width),
-                nn.ReLU(),
-                nn.Linear(base_mlp_layer_width, out_features=64)
-            )
-        """
 
         # appearance embedding
         if self.enable_cam_embedding:
@@ -144,12 +131,12 @@ class RadianceField(nn.Module):
         # ======== Color Head ======== #
         self.rgb_head = MLP(
             in_dims=geometry_feature_dim
-            + self.direction_encoding.n_output_dims
-            + (
-                appearance_embedding_dim
-                if self.enable_cam_embedding or self.enable_img_embedding
-                else 0  # 2 or 0?
-            ),
+                    + self.direction_encoding.n_output_dims
+                    + (
+                        appearance_embedding_dim
+                        if self.enable_cam_embedding or self.enable_img_embedding
+                        else 0  # 2 or 0?
+                    ),
             out_dims=3,
             num_layers=3,
             hidden_dims=head_mlp_layer_width,
@@ -171,11 +158,11 @@ class RadianceField(nn.Module):
         if self.enable_sky_head:
             self.sky_head = MLP(
                 in_dims=self.direction_encoding.n_output_dims
-                + (
-                    appearance_embedding_dim
-                    if self.enable_cam_embedding or self.enable_img_embedding
-                    else 0
-                ),
+                        + (
+                            appearance_embedding_dim
+                            if self.enable_cam_embedding or self.enable_img_embedding
+                            else 0
+                        ),
                 out_dims=3,
                 num_layers=3,
                 hidden_dims=head_mlp_layer_width,
@@ -231,7 +218,7 @@ class RadianceField(nn.Module):
                 )
 
     def register_normalized_training_timesteps(
-        self, normalized_timesteps: Tensor, time_diff: float = None
+            self, normalized_timesteps: Tensor, time_diff: float = None
     ) -> None:
         """
         register normalized timesteps for temporal interpolation
@@ -252,7 +239,7 @@ class RadianceField(nn.Module):
                     # otherwise, compute the time difference from the provided timesteps
                     # it's important to make sure the provided timesteps are consecutive
                     self.time_diff = (
-                        self.training_timesteps[1] - self.training_timesteps[0]
+                            self.training_timesteps[1] - self.training_timesteps[0]
                     )
                 else:
                     self.time_diff = 0
@@ -268,10 +255,10 @@ class RadianceField(nn.Module):
         self.aabb = self.aabb.to(self.device)
 
     def register_feats_reduction_mat(
-        self,
-        feats_reduction_mat: Tensor,
-        feat_color_min: Tensor,
-        feat_color_max: Tensor,
+            self,
+            feats_reduction_mat: Tensor,
+            feat_color_min: Tensor,
+            feat_color_max: Tensor,
     ) -> None:
         """
         A placeholder for registering the PCA reduction matrix and min/max values for visualization.
@@ -290,8 +277,8 @@ class RadianceField(nn.Module):
         return self.aabb.device
 
     def contract_points(
-        self,
-        positions: Tensor,
+            self,
+            positions: Tensor,
     ) -> Tensor:
         """
         contract [-inf, inf] points to the range [0, 1] for hash encoding
@@ -314,8 +301,8 @@ class RadianceField(nn.Module):
         return normed_positions
 
     def forward_static_hash(
-        self,
-        positions: Tensor,
+            self,
+            positions: Tensor,
     ) -> Tensor:
         """
         forward pass for static hash encoding
@@ -332,10 +319,10 @@ class RadianceField(nn.Module):
         return encoded_features, normed_positions
 
     def forward_dynamic_hash(
-        self,
-        normed_positions: Tensor,
-        normed_timestamps: Tensor,
-        return_hash_encodings: bool = False,
+            self,
+            normed_positions: Tensor,
+            normed_timestamps: Tensor,
+            return_hash_encodings: bool = False,
     ) -> Union[Tuple[Tensor, Tensor], Tensor]:
         """
         forward pass for dynamic hash encoding
@@ -371,9 +358,9 @@ class RadianceField(nn.Module):
             return encoded_dynamic_feats
 
     def forward_flow_hash(
-        self,
-        normed_positions: Tensor,
-        normed_timestamps: Tensor,
+            self,
+            normed_positions: Tensor,
+            normed_timestamps: Tensor,
     ) -> Tuple[Tensor, Tensor]:
         """
         forward pass for flow hash encoding
@@ -403,14 +390,14 @@ class RadianceField(nn.Module):
         return flow
 
     def forward(
-        self,
-        positions: Tensor,
-        directions: Tensor = None,
-        data_dict: Dict[str, Tensor] = {},
-        return_density_only: bool = False,
-        combine_static_dynamic: bool = False,
-        query_feature_head: bool = True,
-        query_pe_head: bool = True,
+            self,
+            positions: Tensor,
+            directions: Tensor = None,
+            data_dict: Dict[str, Tensor] = {},
+            return_density_only: bool = False,
+            combine_static_dynamic: bool = False,
+            query_feature_head: bool = True,
+            query_pe_head: bool = True,
     ) -> Dict[str, Tensor]:
         """
         Args:
@@ -436,7 +423,7 @@ class RadianceField(nn.Module):
         static_density = self.density_activation(geo_feats[..., 0])
 
         has_timestamps = (
-            "normed_timestamps" in data_dict or "lidar_normed_timestamps" in data_dict
+                "normed_timestamps" in data_dict or "lidar_normed_timestamps" in data_dict
         )
         if self.dynamic_xyz_encoder is not None and has_timestamps:
             # forward dynamic branch
@@ -517,23 +504,22 @@ class RadianceField(nn.Module):
                 results_dict["dynamic_rgb"] = rgb_results["dynamic_rgb"]
                 results_dict["static_rgb"] = rgb_results["rgb"]
 
-
                 if combine_static_dynamic:
                     static_ratio = static_density / (density + 1e-6)
                     dynamic_ratio = dynamic_density / (density + 1e-6)
                     results_dict["rgb"] = (
-                        static_ratio[..., None] * results_dict["static_rgb"]
-                        + dynamic_ratio[..., None] * results_dict["dynamic_rgb"]
+                            static_ratio[..., None] * results_dict["static_rgb"]
+                            + dynamic_ratio[..., None] * results_dict["dynamic_rgb"]
                     )
             if self.enable_shadow_head:
                 shadow_ratio = self.shadow_head(dynamic_geo_feats)
                 results_dict["shadow_ratio"] = shadow_ratio
                 if combine_static_dynamic and "rgb" in results_dict:
                     results_dict["rgb"] = (
-                        static_ratio[..., None]
-                        * results_dict["rgb"]
-                        * (1 - shadow_ratio)
-                        + dynamic_ratio[..., None] * results_dict["dynamic_rgb"]
+                            static_ratio[..., None]
+                            * results_dict["rgb"]
+                            * (1 - shadow_ratio)
+                            + dynamic_ratio[..., None] * results_dict["dynamic_rgb"]
                     )
         else:
             # if no dynamic branch, use static density
@@ -544,7 +530,6 @@ class RadianceField(nn.Module):
             if directions is not None:
                 rgb_results = self.query_rgb(directions, geo_feats, data_dict=data_dict)
                 results_dict["rgb"] = rgb_results["rgb"]
-
 
         if self.enable_feature_head and query_feature_head:
             if self.enable_learnable_pe and query_pe_head:
@@ -572,17 +557,17 @@ class RadianceField(nn.Module):
                     static_ratio = static_density / (density + 1e-6)
                     dynamic_ratio = dynamic_density / (density + 1e-6)
                     results_dict["dino_feat"] = (
-                        static_ratio[..., None] * dino_feats
-                        + dynamic_ratio[..., None] * dynamic_dino_feats
+                            static_ratio[..., None] * dino_feats
+                            + dynamic_ratio[..., None] * dynamic_dino_feats
                     )
             else:
                 results_dict["dino_feat"] = dino_feats
 
         # query sky if not in lidar mode
         if (
-            self.enable_sky_head
-            and "lidar_origin" not in data_dict
-            and directions is not None
+                self.enable_sky_head
+                and "lidar_origin" not in data_dict
+                and directions is not None
         ):
             directions = directions[:, 0]
             reduced_data_dict = {k: v[:, 0] for k, v in data_dict.items()}
@@ -592,12 +577,12 @@ class RadianceField(nn.Module):
         return results_dict
 
     def temporal_aggregation(
-        self,
-        positions: Tensor,  # current world coordinates
-        normed_timestamps: Tensor,  # current normalized timestamps
-        forward_flow: Tensor,
-        backward_flow: Tensor,
-        dynamic_feats: Tensor,
+            self,
+            positions: Tensor,  # current world coordinates
+            normed_timestamps: Tensor,  # current normalized timestamps
+            forward_flow: Tensor,
+            backward_flow: Tensor,
+            dynamic_feats: Tensor,
     ) -> Tensor:
         """
         temporal aggregation for dynamic features
@@ -649,8 +634,8 @@ class RadianceField(nn.Module):
         )
         # simple weighted sum
         aggregated_dynamic_feats = (
-            dynamic_feats + 0.5 * forward_dynamic_feats + 0.5 * backward_dynamic_feats
-        ) / 2.0
+                                           dynamic_feats + 0.5 * forward_dynamic_feats + 0.5 * backward_dynamic_feats
+                                   ) / 2.0
         return {
             "dynamic_feats": aggregated_dynamic_feats,
             "forward_pred_backward_flow": forward_pred_flow[..., 3:],
@@ -661,11 +646,11 @@ class RadianceField(nn.Module):
         }
 
     def query_rgb(
-        self,
-        directions: Tensor,
-        geo_feats: Tensor,
-        dynamic_geo_feats: Tensor = None,
-        data_dict: Dict[str, Tensor] = None,
+            self,
+            directions: Tensor,
+            geo_feats: Tensor,
+            dynamic_geo_feats: Tensor = None,
+            data_dict: Dict[str, Tensor] = None,
     ) -> Tensor:
         directions = (directions + 1.0) / 2.0  # do we need this?
         h = self.direction_encoding(directions.reshape(-1, directions.shape[-1])).view(
@@ -692,7 +677,7 @@ class RadianceField(nn.Module):
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                 Visualize the features
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        
+
         """
         """
         import matplotlib.pyplot as plt
@@ -723,11 +708,9 @@ class RadianceField(nn.Module):
         plt.show()
         """
 
-
-
         if self.dynamic_xyz_encoder is not None:
             assert (
-                dynamic_geo_feats is not None
+                    dynamic_geo_feats is not None
             ), "Dynamic geometry features are not provided."
             dynamic_rgb = self.rgb_head(torch.cat([h, dynamic_geo_feats], dim=-1))
             dynamic_rgb = F.sigmoid(dynamic_rgb)
@@ -735,7 +718,7 @@ class RadianceField(nn.Module):
         return results
 
     def query_sky(
-        self, directions: Tensor, data_dict: Dict[str, Tensor] = None
+            self, directions: Tensor, data_dict: Dict[str, Tensor] = None
     ) -> Dict[str, Tensor]:
         if len(directions.shape) == 2:
             dd = self.direction_encoding(directions).to(directions)
@@ -763,7 +746,7 @@ class RadianceField(nn.Module):
         return results
 
     def query_flow(
-        self, positions: Tensor, normed_timestamps: Tensor, query_density: bool = True
+            self, positions: Tensor, normed_timestamps: Tensor, query_density: bool = True
     ) -> Dict[str, Tensor]:
         """
         query flow field
@@ -790,10 +773,10 @@ class RadianceField(nn.Module):
         return results
 
     def query_attributes(
-        self,
-        positions: Tensor,
-        normed_timestamps: Tensor = None,
-        query_feature_head: bool = True,
+            self,
+            positions: Tensor,
+            normed_timestamps: Tensor = None,
+            query_feature_head: bool = True,
     ):
         """
         query attributes (density, dino features, etc.)
@@ -854,9 +837,9 @@ class RadianceField(nn.Module):
                 results_dict["static_dino_feat"] = dino_feats
                 results_dict["dynamic_dino_feat"] = dynamic_dino_feats
                 results_dict["dino_feat"] = (
-                    static_density.unsqueeze(-1) * dino_feats
-                    + dynamic_density.unsqueeze(-1) * dynamic_dino_feats
-                ) / (density.unsqueeze(-1) + 1e-6)
+                                                    static_density.unsqueeze(-1) * dino_feats
+                                                    + dynamic_density.unsqueeze(-1) * dynamic_dino_feats
+                                            ) / (density.unsqueeze(-1) + 1e-6)
             else:
                 results_dict["dino_feat"] = dino_feats
         return results_dict
@@ -864,13 +847,13 @@ class RadianceField(nn.Module):
 
 class DensityField(nn.Module):
     def __init__(
-        self,
-        xyz_encoder: HashEncoder,
-        aabb: Union[Tensor, List[float]] = [[-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]],
-        num_dims: int = 3,
-        density_activation: Callable = lambda x: trunc_exp(x - 1),
-        unbounded: bool = False,
-        base_mlp_layer_width: int = 64,
+            self,
+            xyz_encoder: HashEncoder,
+            aabb: Union[Tensor, List[float]] = [[-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]],
+            num_dims: int = 3,
+            density_activation: Callable = lambda x: trunc_exp(x - 1),
+            unbounded: bool = False,
+            base_mlp_layer_width: int = 64,
     ) -> None:
         super().__init__()
         if not isinstance(aabb, Tensor):
@@ -900,7 +883,7 @@ class DensityField(nn.Module):
         self.aabb = self.aabb.to(self.device)
 
     def forward(
-        self, positions: Tensor, data_dict: Dict[str, Tensor] = None
+            self, positions: Tensor, data_dict: Dict[str, Tensor] = None
     ) -> Dict[str, Tensor]:
         if self.unbounded:
             # use infinte norm to contract the positions for cuboid aabb
@@ -919,12 +902,12 @@ class DensityField(nn.Module):
 
 
 def temporal_interpolation(
-    normed_timestamps: Tensor,
-    training_timesteps: Tensor,
-    normed_positions: Tensor,
-    hash_encoder: HashEncoder,
-    mlp: nn.Module,
-    interpolate_xyz_encoding: bool = False,
+        normed_timestamps: Tensor,
+        training_timesteps: Tensor,
+        normed_positions: Tensor,
+        hash_encoder: HashEncoder,
+        mlp: nn.Module,
+        interpolate_xyz_encoding: bool = False,
 ) -> Tensor:
     # to be studied
     if len(normed_timestamps.shape) == 2:
@@ -957,8 +940,8 @@ def temporal_interpolation(
         )
         offset = (
             (
-                (timestep_slice - left_timesteps[:, 0])
-                / (right_timesteps[:, 0] - left_timesteps[:, 0])
+                    (timestep_slice - left_timesteps[:, 0])
+                    / (right_timesteps[:, 0] - left_timesteps[:, 0])
             )
             .unsqueeze(-1)
             .unsqueeze(-1)
@@ -975,7 +958,7 @@ def temporal_interpolation(
             )
         else:
             encoded_feats = (
-                mlp(left_xyz_encoding) * (1 - offset) + mlp(right_xyz_encoding) * offset
+                    mlp(left_xyz_encoding) * (1 - offset) + mlp(right_xyz_encoding) * offset
             )
 
     return encoded_feats
@@ -1024,15 +1007,15 @@ def build_radiance_field_from_cfg(cfg, verbose=True) -> RadianceField:
 
 
 def build_density_field(
-    aabb: Union[Tensor, List[float]] = [[-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]],
-    type: Literal["HashEncoder"] = "HashEncoder",
-    n_input_dims: int = 3,
-    n_levels: int = 5,
-    base_resolution: int = 16,
-    max_resolution: int = 128,
-    log2_hashmap_size: int = 20,
-    n_features_per_level: int = 2,
-    unbounded: bool = True,
+        aabb: Union[Tensor, List[float]] = [[-1.0, -1.0, -1.0, 1.0, 1.0, 1.0]],
+        type: Literal["HashEncoder"] = "HashEncoder",
+        n_input_dims: int = 3,
+        n_levels: int = 5,
+        base_resolution: int = 16,
+        max_resolution: int = 128,
+        log2_hashmap_size: int = 20,
+        n_features_per_level: int = 2,
+        unbounded: bool = True,
 ) -> DensityField:
     if type == "HashEncoder":
         xyz_encoder = HashEncoder(

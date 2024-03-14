@@ -13,7 +13,6 @@ from omegaconf import OmegaConf
 from tqdm import tqdm
 
 import builders
-print("done")
 import loss
 import utils.misc as misc
 import wandb
@@ -444,7 +443,7 @@ def main(args):
 
         dataset = WaymoDataset(data_cfg=cfg.data)
     else:
-        from datasets.nuscenes import NuScenesDataset
+        from datasets.nuscenes_perfect import NuScenesDataset
 
         dataset = NuScenesDataset(data_cfg=cfg.data)
 
@@ -658,7 +657,11 @@ def main(args):
             pixel_loss_dict.update(
                 rgb_loss_fn(render_results["rgb"], pixel_data_dict["pixels"])
             )
-            #print("Pixel_Loss", pixel_loss_dict)
+
+            """
+            Pixel Rays are supervised correctly, see the perfect_nusenes_2_debug folder for statistical graphs
+            """
+
             if sky_loss_fn is not None:  # if sky loss is enabled
                 if cfg.supervision.sky.loss_type == "weights_based":
                     # penalize the points' weights if they point to the sky
@@ -830,6 +833,11 @@ def main(args):
         else:
             total_lidar_loss = -1
 
+        """
+        Update Psnr based on the pixel ray supervision _begin
+        ----------------------------------------------------------------------
+        """
+
         if pixel_data_dict is not None:
             psnr = metrics.compute_psnr(
                 render_results["rgb"], pixel_data_dict["pixels"]
@@ -838,6 +846,10 @@ def main(args):
             metric_logger.update(
                 total_pixel_loss=total_pixel_loss.item(),
             )
+        """
+        Update Psnr based on the pixel ray supervision _end
+        ----------------------------------------------------------------------
+        """
 
         if lidar_data_dict is not None:
             metric_logger.update(
@@ -893,6 +905,9 @@ def main(args):
                     dataset.pixel_source.update_downscale_factor(
                         1 / cfg.data.pixel_source.sampler.buffer_downscale
                     )
+                    """
+                    Note: Pixel are supervised correctly for the batch, now how to query this pixels at given position to render the scene
+                    """
                     render_results = render_pixels(
                         cfg=cfg,
                         model=model,
@@ -945,6 +960,10 @@ def main(args):
                     endpoint=False,
                     dtype=int,
                 )[step // cfg.logging.vis_freq]
+                """
+                Note: Pixel are supervised correctly for the batch, now how to query this pixels at given position to render the scene
+                render_pixels, and render_rays functions are responsible
+                """
                 with torch.no_grad():
                     render_results = render_pixels(
                         cfg=cfg,

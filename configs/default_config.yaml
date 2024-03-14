@@ -9,11 +9,11 @@ data:
   pixel_source: # everything related to "pixels" --- from camera images
     load_size: [640, 960] # [height, width], resize the raw image to this size
     downscale: 1 # downscale factor wrt to the load_size. for example, you may want to render a low-resolution video for preview
-    num_cams: 6 # number of cameras to use, choose from [1, 3, 5] for waymo, [1, 3, 6] for nuscenes. 1: frontal, 3: frontal + frontal_left + frontal_right
+    num_cams: 3 # number of cameras to use, choose from [1, 3, 5] for waymo, [1, 3, 6] for nuscenes. 1: frontal, 3: frontal + frontal_left + frontal_right
     test_image_stride: 0 # use every Nth timestep for the test set. if 0, use all images for training and none for testing
     load_rgb: True  # whether to load rgb images
     load_sky_mask: False  # whether to load sky masks. We provide pre-extracted sky masks for waymo and nuscenes on google drive
-    load_dynamic_mask: True  # whether to load binary masks for dynamic objects. only available for waymo for now
+    load_dynamic_mask: False  # whether to load binary masks for dynamic objects. only available for waymo for now
     load_features: False  # whether to load 2D features from some pretrained model
     skip_feature_extraction: False # whether to skip loading pre-trained for feature extraction
     target_feature_dim: 64 # if not null, we will use pca to reduce the dimension of 2D features to this value
@@ -83,11 +83,11 @@ nerf: # emernerf hyperparameters
     head:
       head_mlp_layer_width: 64 # usually the larger the better
       # ======= appearance embedding ======= #
-      enable_cam_embedding: False # whether to use camera embedding
+      enable_cam_embedding: True # whether to use camera embedding
       enable_img_embedding: True # whether to use image embedding
       appearance_embedding_dim: 16 # appearance embedding dimension for each camera or image
       # ========== sky =========== #
-      enable_sky_head: True # will also initialize a feature sky head when a feature head is enabled
+      enable_sky_head: False # will also initialize a feature sky head when a feature head is enabled
       # ========== features ========== #
       enable_feature_head: False # whether to use feature head
       feature_embedding_dim: 64 # 384 for dino_small, 768 for dino_base, or target_feature_dim if it's not null
@@ -115,8 +115,8 @@ render: # rendering hyperparameters
   vis_voxel_size: 0.3 # voxel size for visualization
 supervision: # supervision hyperparameters
   rgb: # rgb supervision
-    loss_type: l2 # choose from ["l1", "smooth_l1", "l2"]
-    loss_coef: 1.0 # didn't do any ablation study on this
+    loss_type: smooth_l1 # choose from ["l1", "smooth_l1", "l2"]
+    loss_coef: 10.0 # didn't do any ablation study on this
   depth: # depth supervision
     loss_type: l2 # choose from ["l1", "smooth_l1", "l2"]
     enable: True # whether to use depth supervision
@@ -131,8 +131,8 @@ supervision: # supervision hyperparameters
       # you may want to use a stronger line-of-sight loss
       # e.g., reduce start_epsilon to 3.0 and end_epsilon to 1.0
       # but it will lower PSNR
-      start_epsilon: 6.0 # initial epsilon for line-of-sight loss
-      end_epsilon: 2.5 # final epsilon for line-of-sight loss
+      start_epsilon: 3.0 # initial epsilon for line-of-sight loss
+      end_epsilon: 1.0 # final epsilon for line-of-sight loss
       decay_steps: 5000 # how many steps to decay loss_coef
       decay_rate: 0.5 # decay rate for loss_coef
   sky: # sky supervision

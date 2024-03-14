@@ -53,53 +53,43 @@ class NuScenesPixelSource(ScenePixelSource):
     def create_or_load_metas(self):
         # ---- define camera list ---- #
         if self.num_cams == 1:
-            self.camera_list = ["Camera_Front"]
+            self.camera_list = ["CAM_FRONT"]
         elif self.num_cams == 3:
-            self.camera_list = ["Camera_FrontLeft",
-                "Camera_Front",
-                "Camera_FrontRight"]
+            self.camera_list = ["CAM_FRONT_LEFT", "CAM_FRONT", "CAM_FRONT_RIGHT"]
         elif self.num_cams == 6:
             self.camera_list = [
-                 "Camera_FrontLeft",
-                "Camera_Front",
-                "Camera_FrontRight",
-                "Camera_BackLeft",
-                "Camera_Back",
-                "Camera_BackRight",
+                "CAM_FRONT_LEFT",
+                "CAM_FRONT",
+                "CAM_FRONT_RIGHT",
+                "CAM_BACK_LEFT",
+                "CAM_BACK",
+                "CAM_BACK_RIGHT",
             ]
         else:
             raise NotImplementedError(
                 f"num_cams: {self.num_cams} not supported for nuscenes dataset"
             )
 
-        """if os.path.exists(self.meta_file_path):
+        if os.path.exists(self.meta_file_path):
             with open(self.meta_file_path, "r") as f:
                 meta_dict = json.load(f)
             logger.info(f"[Pixel] Loaded camera meta from {self.meta_file_path}")
-            return meta_dict"""
-        if os.path.exists("/home/uchihadj/EmerNeRF/datasets/tumtraf_meta_data_scene_2.json"):
-        #if os.path.exists("/home/uchihadj/EmerNeRF/shata"): ##Only for debugging cam2world data
-            with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_meta_data_scene_2.json", "r") as f:
-                meta_dict = json.load(f)
-            logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/tumtraf_meta_data_scene_2.json")
             return meta_dict
         else:
             logger.info(f"[Pixel] Creating camera meta at {self.meta_file_path}")
 
         if self.nusc is None:
             self.nusc = NuScenes(
-                version="v1.0-mini", dataroot=self.data_path, verbose=True
+                version="v1.0-trainval", dataroot=self.data_path, verbose=True
             )
-            #self.scene = self.nusc.scene[self.scene_idx]
             self.scene = self.nusc.scene[self.scene_idx]
-            #self.scene = self.scene[0]
         total_camera_list = [
-            "Camera_FrontLeft",
-                "Camera_Front",
-                "Camera_FrontRight",
-                "Camera_BackLeft",
-                "Camera_Back",
-                "Camera_BackRight",
+            "CAM_FRONT_LEFT",
+            "CAM_FRONT",
+            "CAM_FRONT_RIGHT",
+            "CAM_BACK_LEFT",
+            "CAM_BACK",
+            "CAM_BACK_RIGHT",
         ]
 
         meta_dict = {
@@ -164,12 +154,9 @@ class NuScenesPixelSource(ScenePixelSource):
 
                 current_camera_data_tokens[camera] = current_camera_data["next"]
 
-        print('meta_dict', meta_dict)
-
         with open(self.meta_file_path, "w") as f:
             json.dump(meta_dict, f, cls=NumpyEncoder)
         logger.info(f"[Pixel] Saved camera meta to {self.meta_file_path}")
-
         return meta_dict
 
     def create_all_filelist(self):
@@ -229,44 +216,18 @@ class NuScenesPixelSource(ScenePixelSource):
         intrinsics, timesteps, cam_ids = [], [], []
         timestamps = []
 
-        """        # Transform camera poses and intrinsics
-        for timestep in range(self.start_timestep, self.end_timestep):
-            ego_pose = self.meta_dict["Camera_Front"]["ego_pose"][timestep]
-            cam_to_world = np.linalg.inv(ego_pose)  # Inverse of ego_pose gives cam_to_world transform
-            ego_to_world = ego_pose
-            # Store the computed values
-            cam_to_worlds.append(cam_to_world)
-            ego_to_worlds.append(ego_to_world)
-        """
-
-
         # we tranform the camera poses w.r.t. the first timestep to make the origin of
         # the first ego pose  as the origin of the world coordinate system.
-        initial_ego_to_global = self.meta_dict["Camera_Front"]["ego_pose"][
+        initial_ego_to_global = self.meta_dict["CAM_FRONT"]["ego_pose"][
             self.start_timestep
         ]
         global_to_initial_ego = np.linalg.inv(initial_ego_to_global)
+
         for t in range(self.start_timestep, self.end_timestep):
-            ego_to_global_current = self.meta_dict["Camera_Front"]["ego_pose"][t]
+            ego_to_global_current = self.meta_dict["CAM_FRONT"]["ego_pose"][t]
             # compute ego_to_world transformation
             ego_to_world = global_to_initial_ego @ ego_to_global_current
             ego_to_worlds.append(ego_to_world)
-
-            """ 
-            #for t in range(self.start_timestep, self.end_timestep):
-            for t in range(self.start_timestep, self.end_timestep):
-            ego_pose = self.meta_dict["Camera_Front"]["ego_pose"][t]
-            cam_to_world = np.linalg.inv(ego_pose)  # Inverse of ego_pose gives cam_to_world transform
-            ego_to_world = ego_pose
-            # Store the computed values
-            cam_to_worlds.append(cam_to_world)
-            ego_to_worlds.append(ego_to_world)
-            #########################################################
-            ego_to_global_current = self.meta_dict["Camera_Front"]["ego_pose"][t]
-            # compute ego_to_world transformation
-            ego_to_world = global_to_initial_ego @ ego_to_global_current
-            ego_to_worlds.append(ego_to_world)
-            """
             for cam_name in self.camera_list:
                 cam_to_ego = self.meta_dict[cam_name]["extrinsics"][t]
                 # Because we use opencv coordinate system to generate camera rays,
@@ -285,30 +246,6 @@ class NuScenesPixelSource(ScenePixelSource):
                     / 1e6
                     * np.ones_like(self.meta_dict[cam_name]["cam_id"][t])
                 )
-            """
-            for cam_name in self.camera_list:
-                cam_to_ego = self.meta_dict[cam_name]["extrinsics"][t]
-                my_cam_to_efo = cam_to_ego = self.meta_dict[cam_name]["extrinsics"][t]
-                # Because we use opencv coordinate system to generate camera rays,
-                # we need to store the transformation from opencv coordinate system to dataset
-                # coordinate system. However, the nuScenes dataset uses the same coordinate
-                # system as opencv, so we just store the identity matrix.
-                # opencv coordinate system: x right, y down, z front
-                cam_to_ego = cam_to_ego @ self.OPENCV2DATASET
-                #cam_to_ego_witjou =
-                cam2world = ego_to_world @ cam_to_ego
-                cam_to_worlds.append(cam2world)
-                #cam_to_worlds.append(my_cam_to_efo)
-
-                intrinsics.append(self.meta_dict[cam_name]["intrinsics"][t])
-                timesteps.append(t)
-                cam_ids.append(self.meta_dict[cam_name]["cam_id"][t])
-                timestamps.append(
-                    self.meta_dict[cam_name]["timestamp"][t]
-                    / 1e6
-                    * np.ones_like(self.meta_dict[cam_name]["cam_id"][t])
-                )
-                """
 
         self.intrinsics = torch.from_numpy(np.stack(intrinsics, axis=0)).float()
         # scale the intrinsics according to the load size
@@ -372,7 +309,7 @@ class NuScenesLiDARSource(SceneLidarSource):
 
         if self.nusc is None:
             self.nusc = NuScenes(
-                version="v1.0-mini", dataroot=self.data_path, verbose=True
+                version="v1.0-trainval", dataroot=self.data_path, verbose=True
             )
         self.scene = self.nusc.scene[self.scene_idx]
 
@@ -554,9 +491,9 @@ class NuScenesDataset(SceneDataset):
         )
         if not os.path.exists(self.processed_data_path):
             os.makedirs(self.processed_data_path)
-        self.img_meta_file_path = "/home/uchihadj/EmerNeRF/datasets/v2x_ego_vehicle.json"#os.path.join(
-            #self.processed_data_path, "img_meta.json"
-        #)
+        self.img_meta_file_path = os.path.join(
+            self.processed_data_path, "img_meta.json"
+        )
         self.lidar_meta_file_path = os.path.join(
             self.processed_data_path, "lidar_meta.json"
         )

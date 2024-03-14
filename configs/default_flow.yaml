@@ -5,5 +5,5 @@ nerf:
       enable_shadow_head: True # whether to use shadow head
       enable_flow_branch: True  # whether to use flow branch
 eval:
-  eval_lidar_flow: True # whether to evaluate lidar flow, only available for waymo for now
+  eval_lidar_flow: False # whether to evaluate lidar flow, only available for waymo for now
   remove_ground_when_eval_lidar_flow: True # whether to remove ground points when evaluating lidar flow

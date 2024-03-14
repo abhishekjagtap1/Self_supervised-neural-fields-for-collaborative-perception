@@ -163,6 +163,27 @@ def render(
             rgbs.append(get_numpy(rgb))
             if "pixels" in data_dict:
                 gt_rgbs.append(get_numpy(data_dict["pixels"]))
+            """            import numpy as np
+            import matplotlib.pyplot as plt
+            #pred = rgbs.detach().cpu().numpy()
+            #gt_rgbs = gt_rgbs.detach().cpu().numpy()
+
+            # Create a figure with two subplots for predicted and ground truth images
+            fig, axes = plt.subplots(1, 2, figsize=(12, 6))
+
+            # Visualize predicted image
+            axes[0].imshow(rgbs[0])
+            axes[0].set_title('Predicted Image')
+            axes[0].axis('off')
+
+            # Visualize ground truth image
+            axes[1].imshow(gt_rgbs[0])
+            axes[1].set_title('Ground Truth Image')
+            axes[1].axis('off')
+
+            # Show the plot
+            plt.show()
+            """
             if "static_rgb" in results:
                 static_rgbs.append(get_numpy(results["static_rgb"]))
             if "dynamic_rgb" in results:
@@ -273,10 +294,13 @@ def render(
                     if not computed:
                         # need to compute new pca matrix for dino_pe_free
                         # because they're not longer aligned with the original dino_feat
-                        computed = True
-                        non_sky_dino_pe_free = results["dino_pe_free"] * (
-                            ~data_dict["sky_masks"].bool().unsqueeze(-1)
-                        ).to(results["dino_pe_free"])
+                        computed =True
+                        #=================Changed non dino to not include sky mask=====================
+                        #computed = True
+                        #non_sky_dino_pe_free = results["dino_pe_free"] * (
+                        #    ~data_dict["sky_masks"].bool().unsqueeze(-1)
+                        #).to(results["dino_pe_free"])
+                        non_sky_dino_pe_free = results["dino_pe_free"]
                         (
                             dino_pe_free_reduction_mat,
                             dino_pe_free_color_min,

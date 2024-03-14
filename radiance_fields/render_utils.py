@@ -12,6 +12,8 @@ from torch.utils.data._utils.collate import collate, default_collate_fn_map
 
 from radiance_fields import DensityField, RadianceField
 from third_party.nerfacc_prop_net import PropNetEstimator
+import numpy as np
+import os
 
 # acknowledgement: this code is inspired by the code from nerfacc
 
@@ -171,6 +173,30 @@ def rendering(
             + dynamic_ratio[..., None] * results["dynamic_rgb"]
         )
         results_dict["rgb"] = accumulate_along_rays(weights, values=rgb)
+        # data = np.load('your_file.npy')
+        """        import numpy as np
+        import matplotlib.pyplot as plt
+        pred_rgbs = torch.from_numpy(np.stack(rgb.detach().cpu(), axis=0))
+        print(pred_rgbs.shape)
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Extract x, y, z coordinates from the data
+        x, y, z = pred_rgbs[:, :, 0], pred_rgbs[:, :, 1], pred_rgbs[:, :, 2]
+
+        # Plot the scatter plot
+        ax.scatter(x.flatten(), y.flatten(), z.flatten(), s=5, alpha=0.5)
+
+        # Add labels and title
+        ax.set_xlabel('X-axis')
+        ax.set_ylabel('Y-axis')
+        ax.set_zlabel('Z-axis')
+        ax.set_title('3D Scatter Plot of 3D Array')
+
+        # Show the plot
+        plt.show()
+        """
+
 
         # =========== RGB Decomposition =========== #
         if return_decomposition:
@@ -286,7 +312,13 @@ def rendering(
 
     return results_dict
 
+"""
+This is the function need to look up rendering pixels, i.e using the pixel supervised how to query and locate the rendered pixel
+Author: Uchihadj, 
+Code_Debuggin: start analysis on rendering rays, assuming data_dicts such as origin, view_dirs, pixel coordinates are correct - Date; Jan18 
 
+I will check regarding regarddinr cam2world and all sssumptions in my metadata today; Jan 19
+"""
 def render_rays(
     # scene
     radiance_field: RadianceField = None,
@@ -321,6 +353,29 @@ def render_rays(
             for k, v in chunk_data_dict.items()
             if "time" in k
         }
+        """
+        Visualize querying denisty
+        """
+        """
+        
+        shata = proposal_network(positions, sub_dict)
+        density = shata['density']
+        #gt_rgbs = torch.from_numpy(np.stack(density.detach().cpu(), axis=0))
+        pred_density = torch.from_numpy(np.stack(density.detach().cpu(), axis=0))
+
+        #save_directory = "/home/uchihadj/EmerNeRF/work_dirs/v2x_emernerf/perfect_nusenes_2_jan19"
+        save_directory = "/home/uchihadj/EmerNeRF/work_dirs/v2x_emernerf/deep_accident_jan19"
+
+
+        # Ensure the directory exists or create it
+        if not os.path.exists(save_directory):
+            os.makedirs(save_directory)
+
+        # Save NumPy arrays to the specified directory
+        np.save(os.path.join(save_directory, 'pred_density_step400.npy'), pred_density)
+        #np.save(os.path.join(save_directory, 'pred_rgbs.npy'), pred_rgbs)
+        #print("Tensors sved")
+        """
         return proposal_network(positions, sub_dict)
 
     def query_fn(t_starts, t_ends):
@@ -339,11 +394,49 @@ def render_rays(
             # use this for positional embedding decomposition
             sub_dict["pixel_coords"] = chunk_data_dict["pixel_coords"]
         positions = t_origins + t_dirs * (t_starts + t_ends)[..., None] / 2.0
+        """
+        Visualize Position Encoding
+        """
+        #gt_rgbs = torch.from_numpy(np.stack(density.detach().cpu(), axis=0))
+        pred_density = torch.from_numpy(np.stack(positions.detach().cpu(), axis=0))
+        """        import matplotlib.pyplot as plt
+        from mpl_toolkits.mplot3d import Axes3D
+
+        # Assuming your data is stored in a variable called 'data'
+        # For example, if your data is in a file called 'your_file.npy', you can load it like this:
+        # data = np.load('your_file.npy')
+
+        # Create a scatter plot
+        fig = plt.figure(figsize=(10, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        # Extract the three dimensions from your data
+        x = np.arange(pred_density.shape[0])
+        y = np.arange(pred_density.shape[1])
+        x, y = np.meshgrid(x, y)
+        z = pred_density[:, :, 0]  # Assuming you want to visualize the first channel
+
+        # Scatter plot
+        ax.scatter(x.flatten(), y.flatten(), z.flatten(), c=z.flatten(), cmap='viridis')
+
+        # Add labels and title
+        ax.set_xlabel('X-axis')
+        ax.set_ylabel('Y-axis')
+        ax.set_zlabel('Z-axis')
+        ax.set_title('3D Scatter Plot of Position embedding decomposition Nuscenes')
+
+        # Show the plot
+        plt.show()
+        """
+
+
         # return density only when rendering lidar, i.e., no rgb or sky or features are rendered
         results_dict: Dict[str, Tensor] = radiance_field(
             positions, t_dirs, sub_dict, return_density_only=(prefix == "lidar_")
         )
         results_dict["density"] = results_dict["density"].squeeze(-1)
+
+
         return results_dict
 
     results = []

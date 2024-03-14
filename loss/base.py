@@ -6,6 +6,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from nerfacc import accumulate_along_rays
 from torch import Tensor
+import os
+import numpy as np
 
 
 def normalize_depth(depth: Tensor, max_depth: float = 80.0):
@@ -138,7 +140,30 @@ class RealValueLoss(Loss):
         Returns:
             The loss value.
         """
+        """
+        Below_chunk: Vis each batch of gt and pred pixel values
+        ---------------------------------------------------------------
+        """
+
         gt, predicted = gt.squeeze(), predicted.squeeze()
+
+        """
+        gt_rgbs = torch.from_numpy(np.stack(gt.detach().cpu(), axis=0))
+        pred_rgbs = torch.from_numpy(np.stack(predicted.detach().cpu(), axis=0))
+
+        save_directory = "/home/uchihadj/EmerNeRF/work_dirs/v2x_emernerf/perfect_nusenes_2_debug"
+
+        # Ensure the directory exists or create it
+        if not os.path.exists(save_directory):
+            os.makedirs(save_directory)
+
+        # Save NumPy arrays to the specified directory
+        np.save(os.path.join(save_directory, 'gt_rgbs.npy'), gt_rgbs)
+        np.save(os.path.join(save_directory, 'pred_rgbs.npy'), pred_rgbs)
+        #print("Tensors sved")
+        
+        """
+
         loss = self.loss_fn(predicted, gt, reduction="none")
         if mask is not None:
             loss = loss * mask.squeeze()
