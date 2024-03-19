@@ -199,7 +199,37 @@ class RadianceField(nn.Module):
                     nn.ReLU(),
                     nn.Linear(feature_mlp_layer_width, feature_embedding_dim),
                 )
+        """
+        # ======== Feature Head original======== #
+        self.enable_feature_head = enable_feature_head
+        if self.enable_feature_head:
+            self.dino_head = nn.Sequential(
+                nn.Linear(semantic_feature_dim, feature_mlp_layer_width),
+                nn.ReLU(),
+                nn.Linear(feature_mlp_layer_width, feature_mlp_layer_width),
+                nn.ReLU(),
+                nn.Linear(feature_mlp_layer_width, feature_embedding_dim),
+            )
+            # placeholders for visualization, will be registered when available
+            self.register_buffer(
+                "feats_reduction_mat", torch.zeros(feature_embedding_dim, 3)
+            )
+            self.register_buffer("feat_color_min", torch.zeros(3, dtype=torch.float32))
+            self.register_buffer("feat_color_max", torch.ones(3, dtype=torch.float32))
 
+            # positional embedding (PE) decomposition
+            self.enable_learnable_pe = enable_learnable_pe
+            if self.enable_learnable_pe:
+                # globally-shared low-resolution learnable PE map
+                self.learnable_pe_map = nn.Parameter(
+                    0.05 * torch.randn(1, feature_embedding_dim // 2, 80, 120),
+                    requires_grad=True,
+                )
+                # a PE head to decode PE features
+                self.pe_head = nn.Sequential(
+                    nn.Linear(feature_embedding_dim // 2, feature_embedding_dim),
+                )
+        """
         # ======== Feature Head ======== #
         self.enable_feature_head = enable_feature_head
         if self.enable_feature_head:
@@ -229,6 +259,20 @@ class RadianceField(nn.Module):
                 self.pe_head = nn.Sequential(
                     nn.Linear(feature_embedding_dim // 2, feature_embedding_dim),
                 )
+        """
+        Add your generalizable nerf feature head here GN_nerf_head that produces nerf features at high dimensions
+        """
+        """
+        if self.enable_feature_head:
+            self.gn_nrf_feature_head =MLP(
+                in_dims=semantic_feature_dim + self.direction_encoding.n_output_dims,
+                out_dims=256,
+                num_layers=3,
+                hidden_dims=head_mlp_layer_width,
+                skip_connection=[1]
+            )
+        """
+
 
     def register_normalized_training_timesteps(
         self, normalized_timesteps: Tensor, time_diff: float = None
@@ -848,7 +892,7 @@ class RadianceField(nn.Module):
             results_dict["density"] = static_density
         if self.enable_feature_head and query_feature_head:
             # query on demand
-            dino_feats = self.dino_head(semantic_feats)
+            dino_feats = self.dino_head(semantic_feats) ################################################################################################################################# Important, abhi_code
             if self.dynamic_xyz_encoder is not None and normed_timestamps is not None:
                 dynamic_dino_feats = self.dino_head(dynamic_semantic_feats)
                 results_dict["static_dino_feat"] = dino_feats
@@ -860,6 +904,50 @@ class RadianceField(nn.Module):
             else:
                 results_dict["dino_feat"] = dino_feats
         return results_dict
+
+
+    #============================= Query feature =============================
+    def query_feature(self,
+                      directions:Tensor,
+                      semantic_feats:Tensor,
+                      positions: Tensor,
+                      data_dict: Dict[str, Tensor] = None,
+                      normed_timestamps: Tensor = None,
+                      query_feature_head: bool = True,
+                      )-> Tensor:
+        """
+        Query features according to rgb head
+        gt_dino_feat = data_dict["features"]
+        """
+        directions = (directions + 1.0) / 2.0
+        h = self.direction_encoding(directions.reshape(-1, directions.shape[-1])).view(
+            *directions.shape[:-1], -1
+        )
+        if self.enable_cam_embedding or self.enable_img_embedding:
+            if "cam_idx" in data_dict and self.enable_cam_embedding:
+                appearance_embedding = self.appearance_embedding(data_dict["cam_idx"])
+            elif "img_idx" in data_dict and self.enable_img_embedding:
+                appearance_embedding = self.appearance_embedding(data_dict["img_idx"])
+            else:
+                # use mean appearance embedding
+                # print("using mean appearance embedding")
+                appearance_embedding = torch.ones(
+                    (*directions.shape[:-1], self.appearance_embedding_dim),
+                    device=directions.device,
+                ) * self.appearance_embedding.weight.mean(dim=0)
+            h = torch.cat([h, appearance_embedding], dim=-1)
+
+        gt_dino_feat = data_dict["features"]
+        feature_vector = self.gn_nrf_feature_head((torch.cat([h, gt_dino_feat], dim=-1)))
+        results = {"dino_pe":feature_vector}
+
+        return results
+
+
+
+
+
+
 
 
 class DensityField(nn.Module):

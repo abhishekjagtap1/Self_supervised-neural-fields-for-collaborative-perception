@@ -59,6 +59,10 @@
     logging.saveckpt_freq=25000 \
     optim.num_iters= 25000
 
+--config_file configs/default_flow.yaml \
+--project tum_traf \
+--run_name tum_traf_full_infra_train \
+--render_data_video
 
     ........................------------------------------------------------------------------------------------------------
 
@@ -85,4 +89,122 @@ tum_traf
 --run_name
 tum_traf_v2x_feature_run_2
 --render_data_video
+
+################################################
+        # ======== Color Head ======== #
+        self.rgb_head = MLP(
+            in_dims=geometry_feature_dim
+            + self.direction_encoding.n_output_dims
+            + (
+                appearance_embedding_dim
+                if self.enable_cam_embedding or self.enable_img_embedding
+                else 0  # 2 or 0?
+            ),
+            out_dims=3,
+            num_layers=3,
+            hidden_dims=head_mlp_layer_width,
+            skip_connections=[1],
+        )
+  ################## Query feature images
+      def query_rgb(
+        self,
+        directions: Tensor,
+        geo_feats: Tensor,
+        dynamic_geo_feats: Tensor = None,
+        data_dict: Dict[str, Tensor] = None,
+    ) -> Tensor:
+        directions = (directions + 1.0) / 2.0  # do we need this?
+        h = self.direction_encoding(directions.reshape(-1, directions.shape[-1])).view(
+            *directions.shape[:-1], -1
+        )
+        if self.enable_cam_embedding or self.enable_img_embedding:
+            if "cam_idx" in data_dict and self.enable_cam_embedding:
+                appearance_embedding = self.appearance_embedding(data_dict["cam_idx"])
+            elif "img_idx" in data_dict and self.enable_img_embedding:
+                appearance_embedding = self.appearance_embedding(data_dict["img_idx"])
+            else:
+                # use mean appearance embedding
+                # print("using mean appearance embedding")
+                appearance_embedding = torch.ones(
+                    (*directions.shape[:-1], self.appearance_embedding_dim),
+                    device=directions.device,
+                ) * self.appearance_embedding.weight.mean(dim=0)
+            h = torch.cat([h, appearance_embedding], dim=-1)
+
+        rgb = self.rgb_head(torch.cat([h, geo_feats], dim=-1))
+        rgb = F.sigmoid(rgb)
+        results = {"rgb": rgb}
+
+     def query_attributes(
+        self,
+        positions: Tensor,
+        normed_timestamps: Tensor = None,
+        query_feature_head: bool = True,
+    ):
+        """
+        query attributes (density, dino features, etc.)
+        """
+        results_dict = {}
+        encoded_features, normed_positions = self.forward_static_hash(positions)
+        geo_feats, semantic_feats = torch.split(
+            encoded_features,
+            [self.geometry_feature_dim, self.semantic_feature_dim],
+            dim=-1,
+        )
+        static_density = self.density_activation(geo_feats[..., 0])
+        if self.dynamic_xyz_encoder is not None and normed_timestamps is not None:
+            dynamic_feats, dynamic_hash_encodings = self.forward_dynamic_hash(
+                normed_positions, normed_timestamps, return_hash_encodings=True
+            )
+            if self.flow_xyz_encoder is not None:
+                flow = self.forward_flow_hash(normed_positions, normed_timestamps)
+                forward_flow = flow[..., :3]
+                backward_flow = flow[..., 3:]
+                results_dict["forward_flow"] = forward_flow
+                results_dict["backward_flow"] = backward_flow
+                temporal_aggregation_results = self.temporal_aggregation(
+                    positions,
+                    normed_timestamps,
+                    forward_flow,
+                    backward_flow,
+                    dynamic_feats,
+                )
+                dynamic_feats = temporal_aggregation_results["dynamic_feats"]
+                temporal_aggregation_results[
+                    "current_dynamic_hash_encodings"
+                ] = dynamic_hash_encodings
+                results_dict.update(temporal_aggregation_results)
+
+            (dynamic_geo_feats, dynamic_semantic_feats,) = torch.split(
+                dynamic_feats,
+                [self.geometry_feature_dim, self.semantic_feature_dim],
+                dim=-1,
+            )
+            dynamic_density = self.density_activation(dynamic_geo_feats[..., 0])
+            density = static_density + dynamic_density
+            results_dict.update(
+                {
+                    "density": density,
+                    "static_density": static_density,
+                    "dynamic_density": dynamic_density,
+                    # "occupancy": occupancy,
+                }
+            )
+        else:
+            results_dict["density"] = static_density
+        if self.enable_feature_head and query_feature_head:
+            # query on demand
+            dino_feats = self.dino_head(semantic_feats) ################################################################################################################################# Important, abhi_code
+            if self.dynamic_xyz_encoder is not None and normed_timestamps is not None:
+                dynamic_dino_feats = self.dino_head(dynamic_semantic_feats)
+                results_dict["static_dino_feat"] = dino_feats
+                results_dict["dynamic_dino_feat"] = dynamic_dino_feats
+                results_dict["dino_feat"] = (
+                    static_density.unsqueeze(-1) * dino_feats
+                    + dynamic_density.unsqueeze(-1) * dynamic_dino_feats
+                ) / (density.unsqueeze(-1) + 1e-6)
+            else:
+                results_dict["dino_feat"] = dino_feats
+        return results_dict
+
 

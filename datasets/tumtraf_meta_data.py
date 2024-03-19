@@ -12,9 +12,9 @@ class NumpyEncoder(json.JSONEncoder):
         return super(NumpyEncoder, self).default(obj)
 
 
-root_path = "/home/uchihadj/TUMtraf/robust-dynrf/dataset/custom/sequence_01/images"
+root_path = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/train/images/s110_camera_basler_south2_8mm"
 meta_data_ego_vehicle = ("/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/s110_camera_basler_south2_8mm.json")
-town_name = "1688625741_027764001_s110_camera_basler_south2_8mm"
+#town_name = "1688625741_027764001_s110_camera_basler_south2_8mm"
 
 
 timestamp=0
@@ -57,7 +57,7 @@ for filename in os.listdir(root_path):
 
 
 
-with open("tumtraf_meta_data_scene_2.json", "w") as outfile:
+with open("tumtraf_infra_south_2_full_train.json", "w") as outfile:
    json.dump(meta_dict, outfile, cls=NumpyEncoder)
 
 print("Finished")

@@ -164,6 +164,10 @@ def render(
             if "pixels" in data_dict:
                 gt_rgbs.append(get_numpy(data_dict["pixels"]))
             """            import numpy as np
+            np.save("/home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_eval/pred_rgb.npy", rgb.cpu().numpy())
+            np.save("/home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_eval/gt_rgb.npy", gt_rgbs.numpy().cpu())
+
+            import numpy as np
             import matplotlib.pyplot as plt
             #pred = rgbs.detach().cpu().numpy()
             #gt_rgbs = gt_rgbs.detach().cpu().numpy()
@@ -184,6 +188,7 @@ def render(
             # Show the plot
             plt.show()
             """
+
             if "static_rgb" in results:
                 static_rgbs.append(get_numpy(results["static_rgb"]))
             if "dynamic_rgb" in results:

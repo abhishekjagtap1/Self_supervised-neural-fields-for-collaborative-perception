@@ -14,7 +14,7 @@ data:
     load_rgb: True  # whether to load rgb images
     load_sky_mask: False  # whether to load sky masks. We provide pre-extracted sky masks for waymo and nuscenes on google drive
     load_dynamic_mask: True  # whether to load binary masks for dynamic objects. only available for waymo for now
-    load_features: True  # whether to load 2D features from some pretrained model
+    load_features: False  # whether to load 2D features from some pretrained model
     skip_feature_extraction: False # whether to skip loading pre-trained for feature extraction
     target_feature_dim: 64 # if not null, we will use pca to reduce the dimension of 2D features to this value
     feature_model_type: dinov2_vitb14 # the pretrained model to use. we use dino_vitb8 for dinov1 and dinov2_vitb14 for dinov2, but more models are available
@@ -89,20 +89,20 @@ nerf: # emernerf hyperparameters
       # ========== sky =========== #
       enable_sky_head: False # will also initialize a feature sky head when a feature head is enabled
       # ========== features ========== #
-      enable_feature_head: True # whether to use feature head
+      enable_feature_head: False # whether to use feature head
       feature_embedding_dim: 64 # 384 for dino_small, 768 for dino_base, or target_feature_dim if it's not null
       feature_mlp_layer_width: 64 # number of hidden units in dino head, usually the larger the better
       # ====== learnable PE map ===== #
       enable_learnable_pe: True # very important decomposition technique
       # ======= dynamic ======== #
-      enable_dynamic_branch: False # whether to use dynamic branch
+      enable_dynamic_branch: True # whether to use dynamic branch
       enable_shadow_head: False # whether to use shadow head to predict shadow ratio
       #TODO: we didn't study this yet
       # interpolation
       interpolate_xyz_encoding: True
       enable_temporal_interpolation: False
       # ======= flow =========== #
-      enable_flow_branch: True  # whether to use flow branch
+      enable_flow_branch: False  # whether to use flow branch
 render: # rendering hyperparameters
   render_chunk_size: 16384 # how many rays to render at a time
   render_novel_trajectory: False # whether to render a predefined novel trajectory after training
@@ -111,7 +111,7 @@ render: # rendering hyperparameters
   render_full: True # whether to render full-set video (train&test set) after training
   render_test: True # whether to render test set after training
   low_res_downscale: 4 # downscale factor for the low-res video
-  save_html: True # whether to save html visualization of voxels
+  save_html: False # whether to save html visualization of voxels
   vis_voxel_size: 0.3 # voxel size for visualization
 supervision: # supervision hyperparameters
   rgb: # rgb supervision
@@ -156,11 +156,11 @@ optim: # optimization hyperparameters
   check_nan: False # whether to check nan, will slow down training
   cache_rgb_freq: 2000 # how often to cache the error map
 logging:
-  vis_freq: 100 # how often to visualize training stats
+  vis_freq: 1 # how often to visualize training stats
   print_freq: 200 # how often to print training stats
   saveckpt_freq: 10000 # how often to save checkpoints
   save_seperate_video: True # whether to save seperate video for each rendered key
-resume_from: null # path to a checkpoint to resume from
+resume_from:  /home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_train/checkpoint_10000.pth # path to a checkpoint to resume from
 eval:
   eval_lidar_flow: False # whether to evaluate lidar flow, only available for waymo for now
   remove_ground_when_eval_lidar_flow: TruSSSe # whether to remove ground points when evaluating lidar flow

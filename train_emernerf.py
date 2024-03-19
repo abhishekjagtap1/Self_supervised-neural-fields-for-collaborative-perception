@@ -494,15 +494,20 @@ def main(args):
             f"Will start training for {cfg.optim.num_iters} iterations from scratch"
         )
 
-    if args.visualize_voxel or args.eval_only:
+    #if args.visualize_voxel or args.eval_only:
+    if args.visualize_voxel:
+
         if cfg.nerf.model.head.enable_flow_branch:
             logger.info("Visualizing scene flow...")
+            """
+            
             visualize_scene_flow(
                 cfg=cfg,
                 model=model,
                 dataset=dataset,
                 device=device,
             )
+            """
         if cfg.nerf.model.head.enable_feature_head:
             logger.info("Visualizing voxel features...")
             visualize_voxels(
