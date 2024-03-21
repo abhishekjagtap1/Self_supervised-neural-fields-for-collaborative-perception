@@ -61,7 +61,7 @@
 
 --config_file configs/default_flow.yaml \
 --project tum_traf \
---run_name tum_traf_full_infra_train \
+--run_name tum_traf_full_infra_train_zero_test \
 --render_data_video
 
     ........................------------------------------------------------------------------------------------------------

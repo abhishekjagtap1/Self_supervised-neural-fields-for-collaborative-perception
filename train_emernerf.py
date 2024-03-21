@@ -288,44 +288,6 @@ def do_evaluation(
             wandb.log(avg_flow_metrics)
         torch.cuda.empty_cache()
 
-    if cfg.data.pixel_source.load_rgb and cfg.render.render_low_res:
-        logger.info("Rendering full set but in a low_resolution...")
-        dataset.pixel_source.update_downscale_factor(1 / cfg.render.low_res_downscale)
-        render_results = render_pixels(
-            cfg=cfg,
-            model=model,
-            proposal_networks=proposal_networks,
-            proposal_estimator=proposal_estimator,
-            dataset=dataset.full_pixel_set,
-            compute_metrics=True,
-            return_decomposition=True,
-        )
-        dataset.pixel_source.reset_downscale_factor()
-        if args.render_video_postfix is None:
-            video_output_pth = os.path.join(cfg.log_dir, "lowres_videos", f"{step}.mp4")
-        else:
-            video_output_pth = os.path.join(
-                cfg.log_dir,
-                "lowres_videos",
-                f"{step}_{args.render_video_postfix}.mp4",
-            )
-        vis_frame_dict = save_videos(
-            render_results,
-            video_output_pth,
-            num_timestamps=dataset.num_img_timesteps,
-            keys=render_keys,
-            save_seperate_video=cfg.logging.save_seperate_video,
-            num_cams=dataset.pixel_source.num_cams,
-            fps=cfg.render.fps,
-            verbose=True,
-        )
-        if args.enable_wandb:
-            for k, v in vis_frame_dict.items():
-                wandb.log({f"pixel_rendering/lowres_full/{k}": wandb.Image(v)})
-
-        del render_results, vis_frame_dict
-        torch.cuda.empty_cache()
-
     if cfg.data.pixel_source.load_rgb:
         logger.info("Evaluating Pixels...")
         if dataset.test_pixel_set is not None and cfg.render.render_test:
@@ -372,7 +334,7 @@ def do_evaluation(
                 save_seperate_video=cfg.logging.save_seperate_video,
                 fps=cfg.render.fps,
                 verbose=True,
-                # save_images=True,
+                save_images=True,
             )
             if args.enable_wandb:
                 for k, v in vis_frame_dict.items():
@@ -430,6 +392,45 @@ def do_evaluation(
             del render_results, vis_frame_dict
             torch.cuda.empty_cache()
         # TODO: add a novel trajectory rendering part
+    if cfg.data.pixel_source.load_rgb and cfg.render.render_low_res:
+        logger.info("Rendering full set but in a low_resolution...")
+        dataset.pixel_source.update_downscale_factor(1 / cfg.render.low_res_downscale)
+        render_results = render_pixels(
+            cfg=cfg,
+            model=model,
+            proposal_networks=proposal_networks,
+            proposal_estimator=proposal_estimator,
+            dataset=dataset.full_pixel_set,
+            compute_metrics=True,
+            return_decomposition=True,
+        )
+        dataset.pixel_source.reset_downscale_factor()
+        if args.render_video_postfix is None:
+            video_output_pth = os.path.join(cfg.log_dir, "lowres_videos", f"{step}.mp4")
+        else:
+            video_output_pth = os.path.join(
+                cfg.log_dir,
+                "lowres_videos",
+                f"{step}_{args.render_video_postfix}.mp4",
+            )
+        vis_frame_dict = save_videos(
+            render_results,
+            video_output_pth,
+            num_timestamps=dataset.num_img_timesteps,
+            keys=render_keys,
+            save_seperate_video=cfg.logging.save_seperate_video,
+            num_cams=dataset.pixel_source.num_cams,
+            fps=cfg.render.fps,
+            verbose=True,
+        )
+        if args.enable_wandb:
+            for k, v in vis_frame_dict.items():
+                wandb.log({f"pixel_rendering/lowres_full/{k}": wandb.Image(v)})
+
+        del render_results, vis_frame_dict
+        torch.cuda.empty_cache()
+
+
 
 
 def main(args):

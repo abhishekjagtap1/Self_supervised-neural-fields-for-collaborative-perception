@@ -105,7 +105,7 @@ nerf: # emernerf hyperparameters
       enable_flow_branch: False  # whether to use flow branch
 render: # rendering hyperparameters
   render_chunk_size: 16384 # how many rays to render at a time
-  render_novel_trajectory: False # whether to render a predefined novel trajectory after training
+  render_novel_trajectory: True # whether to render a predefined novel trajectory after training
   fps: 24 # fps for the rendered video
   render_low_res: True # whether to render low-res video for preview after training
   render_full: True # whether to render full-set video (train&test set) after training 

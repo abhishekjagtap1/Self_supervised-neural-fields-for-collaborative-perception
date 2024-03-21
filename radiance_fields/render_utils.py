@@ -384,6 +384,7 @@ def render_rays(
         t_dirs = chunk_data_dict[prefix + "viewdirs"][..., None, :].repeat_interleave(
             t_starts.shape[-1], dim=-2
         )
+
         sub_dict = {
             k: v[..., None].repeat_interleave(t_starts.shape[-1], dim=-1)
             for k, v in chunk_data_dict.items()

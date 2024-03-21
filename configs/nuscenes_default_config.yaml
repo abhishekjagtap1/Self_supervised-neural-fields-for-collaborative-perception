@@ -9,7 +9,7 @@ data:
   pixel_source: # everything related to "pixels" --- from camera images
     load_size: [640, 960] # [height, width], resize the raw image to this size
     downscale: 1 # downscale factor wrt to the load_size. for example, you may want to render a low-resolution video for preview
-    num_cams: 1 # number of cameras to use, choose from [1, 3, 5] for waymo, [1, 3, 6] for nuscenes. 1: frontal, 3: frontal + frontal_left + frontal_right
+    num_cams: 5 # number of cameras to use, choose from [1, 3, 5] for waymo, [1, 3, 6] for nuscenes. 1: frontal, 3: frontal + frontal_left + frontal_right
     test_image_stride: 0 # use every Nth timestep for the test set. if 0, use all images for training and none for testing
     load_rgb: True  # whether to load rgb images
     load_sky_mask: False  # whether to load sky masks. We provide pre-extracted sky masks for waymo and nuscenes on google drive
@@ -87,7 +87,7 @@ nerf: # emernerf hyperparameters
       enable_img_embedding: True # whether to use image embedding
       appearance_embedding_dim: 16 # appearance embedding dimension for each camera or image
       # ========== sky =========== #
-      enable_sky_head: False # will also initialize a feature sky head when a feature head is enabled
+      enable_sky_head: True # will also initialize a feature sky head when a feature head is enabled
       # ========== features ========== #
       enable_feature_head: False # whether to use feature head
       feature_embedding_dim: 64 # 384 for dino_small, 768 for dino_base, or target_feature_dim if it's not null
@@ -96,7 +96,7 @@ nerf: # emernerf hyperparameters
       enable_learnable_pe: True # very important decomposition technique
       # ======= dynamic ======== #
       enable_dynamic_branch: True # whether to use dynamic branch
-      enable_shadow_head: False # whether to use shadow head to predict shadow ratio
+      enable_shadow_head: True # whether to use shadow head to predict shadow ratio
       #TODO: we didn't study this yet
       # interpolation
       interpolate_xyz_encoding: True
@@ -156,11 +156,11 @@ optim: # optimization hyperparameters
   check_nan: False # whether to check nan, will slow down training
   cache_rgb_freq: 2000 # how often to cache the error map
 logging:
-  vis_freq: 1 # how often to visualize training stats
+  vis_freq: 2000 # how often to visualize training stats
   print_freq: 200 # how often to print training stats
   saveckpt_freq: 10000 # how often to save checkpoints
   save_seperate_video: True # whether to save seperate video for each rendered key
-resume_from:  /home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_train/checkpoint_10000.pth # path to a checkpoint to resume from
+resume_from: null #/home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_train_zero_test/checkpoint_25000.pth # path to a checkpoint to resume from
 eval:
   eval_lidar_flow: False # whether to evaluate lidar flow, only available for waymo for now
   remove_ground_when_eval_lidar_flow: TruSSSe # whether to remove ground points when evaluating lidar flow

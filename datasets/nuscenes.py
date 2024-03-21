@@ -53,10 +53,10 @@ class NuScenesPixelSource(ScenePixelSource):
     def create_or_load_metas(self):
         # ---- define camera list ---- #
         if self.num_cams == 1:
-            self.camera_list = ["Camera_Front"]
+            self.camera_list = ["Camera_Front"] #["Camera_FrontLeft"]
         elif self.num_cams == 3:
             self.camera_list = ["Camera_FrontLeft",
-                "Camera_Front",
+                "Camera_Back", #"Camera_Front",
                 "Camera_FrontRight"]
         elif self.num_cams == 6:
             self.camera_list = [
@@ -66,6 +66,14 @@ class NuScenesPixelSource(ScenePixelSource):
                 "Camera_BackLeft",
                 "Camera_Back",
                 "Camera_BackRight",
+            ]
+        elif self.num_cams == 5:
+            self.camera_list = [
+                "Camera_FrontLeft",
+                "Camera_Front",
+                "Camera_FrontRight",
+                "Camera_BackLeft",
+                "Camera_Back"
             ]
         else:
             raise NotImplementedError(
@@ -79,7 +87,8 @@ class NuScenesPixelSource(ScenePixelSource):
             return meta_dict"""
         if os.path.exists("/home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json"):
         #if os.path.exists("/home/uchihadj/EmerNeRF/shata"): ##Only for debugging cam2world data
-            with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json", "r") as f:
+            #with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json", "r") as f:
+            with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_val_data.json", "r") as f: # debugging with wrong meta data
                 meta_dict = json.load(f)
             logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json")
             return meta_dict
@@ -243,6 +252,7 @@ class NuScenesPixelSource(ScenePixelSource):
         # we tranform the camera poses w.r.t. the first timestep to make the origin of
         # the first ego pose  as the origin of the world coordinate system.
         initial_ego_to_global = self.meta_dict["Camera_Front"]["ego_pose"][
+        #initial_ego_to_global = self.meta_dict["Camera_FrontLeft"]["ego_pose"][
             self.start_timestep
         ]
         global_to_initial_ego = np.linalg.inv(initial_ego_to_global)
@@ -309,7 +319,10 @@ class NuScenesPixelSource(ScenePixelSource):
                     * np.ones_like(self.meta_dict[cam_name]["cam_id"][t])
                 )
                 """
-
+        #print(intrinsics)
+        #print(intrinsics.numpy().shape)
+        #print(len(intrinsics.shape))
+        shata = np.stack(intrinsics, axis=0)
         self.intrinsics = torch.from_numpy(np.stack(intrinsics, axis=0)).float()
         # scale the intrinsics according to the load size
         self.intrinsics[..., 0, 0] *= (
@@ -583,9 +596,9 @@ class NuScenesDataset(SceneDataset):
         """
         train_pixel_set, test_pixel_set, full_pixel_set = None, None, None
         train_lidar_set, test_lidar_set, full_lidar_set = None, None, None
-        assert (
-            len(self.test_indices) == 0
-        ), "Test split is not supported yet for nuscenes"
+        #assert (
+         #   len(self.test_indices) == 0
+        #), "Test split is not supported yet for nuscenes"
         # ---- create split wrappers ---- #
         if self.pixel_source is not None:
             train_pixel_set = SplitWrapper(
@@ -602,6 +615,17 @@ class NuScenesDataset(SceneDataset):
                 split="full",
                 ray_batch_size=self.data_cfg.ray_batch_size,
             )
+            """
+            Adding Zero Shot Test Timesteps
+            """
+            if len(self.test_indices) > 0:
+                test_pixel_set = SplitWrapper(
+                    datasource=self.pixel_source,
+                    # test_indices are img indices, so the length is num_cams * num_test_timesteps
+                    split_indices=self.test_indices,
+                    split="test",
+                    ray_batch_size=self.data_cfg.ray_batch_size,
+                )
         if self.lidar_source is not None:
             train_lidar_set = SplitWrapper(
                 datasource=self.lidar_source,
@@ -681,9 +705,11 @@ class NuScenesDataset(SceneDataset):
         return pixel_source, lidar_source
 
     def split_train_test(self):
+        """
         assert (
             self.data_cfg.pixel_source.test_image_stride == 0
         ), "test_image_stride > 0 is not supported for nuscenes dataset. "
+        """
         if self.data_cfg.pixel_source.test_image_stride != 0:
             test_timesteps = np.arange(
                 self.data_cfg.pixel_source.test_image_stride,
