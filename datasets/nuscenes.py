@@ -85,12 +85,12 @@ class NuScenesPixelSource(ScenePixelSource):
                 meta_dict = json.load(f)
             logger.info(f"[Pixel] Loaded camera meta from {self.meta_file_path}")
             return meta_dict"""
-        if os.path.exists("/home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json"):
+        if os.path.exists("/home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_val_timestamp.json"):
         #if os.path.exists("/home/uchihadj/EmerNeRF/shata"): ##Only for debugging cam2world data
             #with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json", "r") as f:
-            with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_val_data.json", "r") as f: # debugging with wrong meta data
+            with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_front_fixed.json", "r") as f: # debugging with wrong meta data
                 meta_dict = json.load(f)
-            logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json")
+            logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_front_fixed.json")
             return meta_dict
         else:
             logger.info(f"[Pixel] Creating camera meta at {self.meta_file_path}")

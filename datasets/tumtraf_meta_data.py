@@ -15,6 +15,7 @@ class NumpyEncoder(json.JSONEncoder):
 
 root_path_1 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/val/images/vehicle_camera_basler_16mm"
 calib_path_1 = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/vehicle_camera_basler_16mm.json"
+calib_path_lidar_vehicle = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/vehicle_lidar_robosense.json"
 
 
 root_path_2 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/val/images/s110_camera_basler_east_8mm"
@@ -66,9 +67,11 @@ for filename in os.listdir(root_path_1):
         meta_dict["Camera_Front"]["filepath"].append(file_path)
         meta_dict["Camera_Front"]["cam_id"].append(camera_id_mapping["Camera_Front"])
         meta_dict["Camera_Front"]["timestamp"].append(timestamp)
-        timestamp +=1
+        timestamp +=10
         with open(calib_path_1, 'rb') as file:
             calib_data = json.load(file)
+        with open(calib_path_lidar_vehicle, "rb") as file:
+            calib_lidar_data = json.load(file)
 
         #intrinsic_Camera_Front = calib_data.get('calibrated_intrinsic_camera_matrix', None)
         intrinsic_Camera_Front = calib_data.get('optimal_intrinsic_camera_matrix', None)
@@ -79,9 +82,16 @@ for filename in os.listdir(root_path_1):
         extrinsic_matrix[:3, :3] = rotation_matrix
         extrinsic_matrix[:3, 3] = translation_matrix
         extrinsic_matrix[3, 3] = 1
-        meta_dict["Camera_Front"]["extrinsics"].append(extrinsic_matrix)
-        meta_dict["Camera_Front"]["ego_pose"].append(extrinsic_matrix)
+
+        extrinsic_matrix_front = calib_lidar_data.get('transformation_matrix_vehicle_lidar_robosense_to_vehicle_camera_basler_16mm', None)
+
+        extrinsic_matrix_from_calib_camera = calib_data.get('transformation_matrix_s110_lidar_ouster_south_to_s110_base', None)
+        #extrinsic_matrix_lidar_to_camera = np.matmul(transformation_matrix_base_to_camera,
+         #                                            transformation_matrix_lidar_to_base)
+        meta_dict["Camera_Front"]["ego_pose"].append(extrinsic_matrix_from_calib_camera)
+        meta_dict["Camera_Front"]["extrinsics"].append(extrinsic_matrix_from_calib_camera)
         del intrinsic_Camera_Front
+
 
 timestamp=0
 # Iterate through the files in the folder
@@ -92,7 +102,7 @@ for filename in os.listdir(root_path_4):
         meta_dict["Camera_FrontLeft"]["filepath"].append(file_path)
         meta_dict["Camera_FrontLeft"]["cam_id"].append(camera_id_mapping["Camera_FrontLeft"])
         meta_dict["Camera_FrontLeft"]["timestamp"].append(timestamp)
-        timestamp +=1
+        timestamp +=10
         with open(calib_path_4, 'rb') as file:
             calib_data = json.load(file)
 
@@ -117,7 +127,7 @@ for filename in os.listdir(root_path_5):
         meta_dict["Camera_FrontRight"]["filepath"].append(file_path)
         meta_dict["Camera_FrontRight"]["cam_id"].append(camera_id_mapping["Camera_FrontRight"])
         meta_dict["Camera_FrontRight"]["timestamp"].append(timestamp)
-        timestamp +=1
+        timestamp +=10
         with open(calib_path_5, 'rb') as file:
             calib_data = json.load(file)
 
@@ -141,7 +151,7 @@ for filename in os.listdir(root_path_2):
         meta_dict["Camera_BackLeft"]["filepath"].append(file_path)
         meta_dict["Camera_BackLeft"]["cam_id"].append(camera_id_mapping["Camera_BackLeft"])
         meta_dict["Camera_BackLeft"]["timestamp"].append(timestamp)
-        timestamp +=1
+        timestamp +=10
         with open(calib_path_2, 'rb') as file:
             calib_data = json.load(file)
 
@@ -165,7 +175,7 @@ for filename in os.listdir(root_path_3):
         meta_dict["Camera_Back"]["filepath"].append(file_path)
         meta_dict["Camera_Back"]["cam_id"].append(camera_id_mapping["Camera_Back"])
         meta_dict["Camera_Back"]["timestamp"].append(timestamp)
-        timestamp +=1
+        timestamp +=10
         with open(calib_path_3, 'rb') as file:
             calib_data = json.load(file)
 
@@ -182,7 +192,7 @@ for filename in os.listdir(root_path_3):
         meta_dict["Camera_Back"]["ego_pose"].append(extrinsic_matrix)
 
 
-with open("tumtraf_collaborative_val_data.json", "w") as outfile:
+with open("tumtraf_collaborative_front_fixed.json", "w") as outfile:
    json.dump(meta_dict, outfile, cls=NumpyEncoder)
 
 print("Finished")

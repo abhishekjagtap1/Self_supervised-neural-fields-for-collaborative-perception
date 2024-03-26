@@ -10,7 +10,7 @@ data:
     load_size: [640, 960] # [height, width], resize the raw image to this size
     downscale: 1 # downscale factor wrt to the load_size. for example, you may want to render a low-resolution video for preview
     num_cams: 5 # number of cameras to use, choose from [1, 3, 5] for waymo, [1, 3, 6] for nuscenes. 1: frontal, 3: frontal + frontal_left + frontal_right
-    test_image_stride: 0 # use every Nth timestep for the test set. if 0, use all images for training and none for testing
+    test_image_stride: 20 # use every Nth timestep for the test set. if 0, use all images for training and none for testing
     load_rgb: True  # whether to load rgb images
     load_sky_mask: False  # whether to load sky masks. We provide pre-extracted sky masks for waymo and nuscenes on google drive
     load_dynamic_mask: True  # whether to load binary masks for dynamic objects. only available for waymo for now
@@ -83,8 +83,8 @@ nerf: # emernerf hyperparameters
     head:
       head_mlp_layer_width: 64 # usually the larger the better
       # ======= appearance embedding ======= #
-      enable_cam_embedding: False # whether to use camera embedding
-      enable_img_embedding: True # whether to use image embedding
+      enable_cam_embedding: True # whether to use camera embedding
+      enable_img_embedding: False # whether to use image embedding
       appearance_embedding_dim: 16 # appearance embedding dimension for each camera or image
       # ========== sky =========== #
       enable_sky_head: True # will also initialize a feature sky head when a feature head is enabled
@@ -105,7 +105,7 @@ nerf: # emernerf hyperparameters
       enable_flow_branch: False  # whether to use flow branch
 render: # rendering hyperparameters
   render_chunk_size: 16384 # how many rays to render at a time
-  render_novel_trajectory: False # whether to render a predefined novel trajectory after training
+  render_novel_trajectory: True # whether to render a predefined novel trajectory after training
   fps: 24 # fps for the rendered video
   render_low_res: True # whether to render low-res video for preview after training
   render_full: True # whether to render full-set video (train&test set) after training

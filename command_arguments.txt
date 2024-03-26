@@ -59,6 +59,11 @@
     logging.saveckpt_freq=25000 \
     optim.num_iters= 25000
 
+--config_file configs/default_dynamic.yaml \
+--project tum_traf \
+--run_name tum_traf_timestamp_10 \
+--render_data_video
+
 --config_file configs/default_flow.yaml \
 --project tum_traf \
 --run_name tum_traf_full_infra_train_zero_test \
