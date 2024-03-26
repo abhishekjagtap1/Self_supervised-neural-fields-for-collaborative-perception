@@ -60,8 +60,8 @@
     optim.num_iters= 25000
 
 --config_file configs/default_dynamic.yaml \
---project tum_traf \
---run_name tum_traf_timestamp_10 \
+--project tum_traf_overlapping \
+--run_name train_overlapping_south_1_2_3 \
 --render_data_video
 
 --config_file configs/default_flow.yaml \

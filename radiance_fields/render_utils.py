@@ -347,6 +347,8 @@ def render_rays(
         # query propsal networks for density
         t_origins = chunk_data_dict[prefix + "origins"][..., None, :]
         t_dirs = chunk_data_dict[prefix + "viewdirs"][..., None, :]
+
+
         positions = t_origins + t_dirs * (t_starts + t_ends)[..., None] / 2.0
         sub_dict = {
             k: v[..., None].repeat_interleave(t_starts.shape[-1], dim=-1)

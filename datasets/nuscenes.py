@@ -56,7 +56,7 @@ class NuScenesPixelSource(ScenePixelSource):
             self.camera_list = ["Camera_Front"] #["Camera_FrontLeft"]
         elif self.num_cams == 3:
             self.camera_list = ["Camera_FrontLeft",
-                "Camera_Back", #"Camera_Front",
+                "Camera_Front",
                 "Camera_FrontRight"]
         elif self.num_cams == 6:
             self.camera_list = [
@@ -85,12 +85,12 @@ class NuScenesPixelSource(ScenePixelSource):
                 meta_dict = json.load(f)
             logger.info(f"[Pixel] Loaded camera meta from {self.meta_file_path}")
             return meta_dict"""
-        if os.path.exists("/home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_val_timestamp.json"):
+        if os.path.exists("/home/uchihadj/EmerNeRF/datasets/tumtraf_overlapping_scene_south_1_2_3.json"):
         #if os.path.exists("/home/uchihadj/EmerNeRF/shata"): ##Only for debugging cam2world data
             #with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json", "r") as f:
-            with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_front_fixed.json", "r") as f: # debugging with wrong meta data
+            with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_overlapping_scene_south_1_2_3.json", "r") as f: # debugging with wrong meta data
                 meta_dict = json.load(f)
-            logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_front_fixed.json")
+            logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/tumtraf_overlapping_scene_south_1_2_3.json")
             return meta_dict
         else:
             logger.info(f"[Pixel] Creating camera meta at {self.meta_file_path}")
@@ -182,6 +182,9 @@ class NuScenesPixelSource(ScenePixelSource):
         return meta_dict
 
     def create_all_filelist(self):
+        """
+        Align of timestamp not needed for Tum traf make relavant changes please
+        """
         # NuScenes dataset is not synchronized, so we need to find the minimum shared
         # scene length, and only use the frames within the shared scene length.
         # we also define the start and end timestep within the shared scene length
@@ -251,13 +254,14 @@ class NuScenesPixelSource(ScenePixelSource):
 
         # we tranform the camera poses w.r.t. the first timestep to make the origin of
         # the first ego pose  as the origin of the world coordinate system.
-        initial_ego_to_global = self.meta_dict["Camera_Front"]["ego_pose"][
-        #initial_ego_to_global = self.meta_dict["Camera_FrontLeft"]["ego_pose"][
+        #initial_ego_to_global = self.meta_dict["Camera_Front"]["ego_pose"][
+        initial_ego_to_global = self.meta_dict["Camera_FrontLeft"]["ego_pose"][
             self.start_timestep
         ]
         global_to_initial_ego = np.linalg.inv(initial_ego_to_global)
         for t in range(self.start_timestep, self.end_timestep):
-            ego_to_global_current = self.meta_dict["Camera_Front"]["ego_pose"][t]
+            #ego_to_global_current = self.meta_dict["Camera_Front"]["ego_pose"][t]
+            ego_to_global_current = self.meta_dict["Camera_FrontLeft"]["ego_pose"][t]
             # compute ego_to_world transformation
             ego_to_world = global_to_initial_ego @ ego_to_global_current
             ego_to_worlds.append(ego_to_world)

@@ -166,11 +166,12 @@ def render(
             """            import numpy as np
             np.save("/home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_eval/pred_rgb.npy", rgb.cpu().numpy())
             np.save("/home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_eval/gt_rgb.npy", gt_rgbs.numpy().cpu())
-
+            
             import numpy as np
             import matplotlib.pyplot as plt
-            #pred = rgbs.detach().cpu().numpy()
-            #gt_rgbs = gt_rgbs.detach().cpu().numpy()
+            pred = rgbs.detach().cpu().numpy()
+            gt_rgbs = gt_rgbs.detach().cpu().numpy()
+            print(pred.shape)
 
             # Create a figure with two subplots for predicted and ground truth images
             fig, axes = plt.subplots(1, 2, figsize=(12, 6))
@@ -188,6 +189,7 @@ def render(
             # Show the plot
             plt.show()
             """
+
 
             if "static_rgb" in results:
                 static_rgbs.append(get_numpy(results["static_rgb"]))

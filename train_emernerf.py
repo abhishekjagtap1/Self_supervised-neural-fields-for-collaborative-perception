@@ -385,6 +385,7 @@ def do_evaluation(
                 save_seperate_video=cfg.logging.save_seperate_video,
                 fps=cfg.render.fps,
                 verbose=True,
+                save_images=True,
             )
             if args.enable_wandb:
                 for k, v in vis_frame_dict.items():

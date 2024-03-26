@@ -35,7 +35,18 @@ def idx_to_3d(idx, H, W):
     k = idx % W
     return i, j, k
 
+def sphere2xyz(r, theta, phi):
+    x = torch.cos(phi) * torch.sin(theta)
+    y = torch.sin(phi)
+    z = torch.cos(phi) * torch.cos(theta)
+    return torch.stack([r*x, r*y, r*z], axis=-1)
 
+def get_ray_directions_360(i, j, W, H):
+    i, j = i.float() + 0.5, j.float() + 0.5
+    phi = j * torch.pi / H - torch.pi / 2.
+    theta = i * 2. * torch.pi / W + torch.pi
+    directions = sphere2xyz(torch.ones_like(theta), theta, phi)
+    return directions
 def get_rays(
     x: Tensor, y: Tensor, c2w: Tensor, intrinsic: Tensor
 ) -> Tuple[Tensor, Tensor, Tensor]:
@@ -54,15 +65,69 @@ def get_rays(
         intrinsic = intrinsic[None, :, :]
     if len(c2w.shape) == 2:
         c2w = c2w[None, :, :]
-    """    # Create a transformation matrix to convert the deep accident intrinsic to the desired format
-    # Create a transformation matrix to convert the deep accident intrinsic to the desired format
-    transformation_matrix = torch.tensor([[1.0, 0.0, 0.0],
-                                          [0.0, -1.0, 0.0],
-                                          [0.0, 0.0, 1.0]], device='cuda:0')  # Use floating-point numbers
 
-    # Apply the transformation to the deep accident intrinsic
-    intrinsic = torch.matmul(intrinsic.float(), transformation_matrix.transpose(0, 1))
-    eps = 1e-6  # Small epsilon value
+    """
+    New Direction Function - BRUTE 90 DEGRREE ROATAION
+    90 degree roattion 
+        rotation_matrix = torch.tensor(
+        [[0, 0, 1],
+         [0, 1, 0],
+         [-1, 0, 0]], device=c2w.device, dtype=c2w.dtype
+    )
+    
+    """
+
+    """
+    For a 10 degree rotational novel view
+    use below code 
+    """
+    """
+    
+    angle_degrees = torch.tensor(-10.0)
+    angle_radians = torch.deg2rad(angle_degrees)
+    rotation_matrix = torch.tensor(
+        [[torch.cos(angle_radians), 0, torch.sin(angle_radians)],
+         [0, 1, 0],
+         [-torch.sin(angle_radians), 0, torch.cos(angle_radians)]],
+        device=c2w.device, dtype=c2w.dtype
+    )
+
+    new_rotation = torch.matmul(c2w[:, :3, :3], rotation_matrix.transpose(0, 1))
+
+    # Add a small translation along the x-axis
+    translation = torch.tensor([0.0, 0.0, 1.0], device=c2w.device, dtype=c2w.dtype)
+
+    # Combine the rotation and translation to form the new c2w matrix
+    new_c2w = torch.cat([new_rotation, c2w[:, :3, -1][:, :, None] + translation], dim=-1)
+
+    # Compute new directions based on the modified camera-to-world matrix
+    camera_dirs = torch.nn.functional.pad(
+        torch.stack(
+            [
+                (x - intrinsic[:, 0, 2] + 0.5) / intrinsic[:, 0, 0],
+                (y - intrinsic[:, 1, 2] + 0.5) / intrinsic[:, 1, 1],
+            ],
+            dim=-1,
+        ),
+        (0, 1),
+        value=1.0,
+    )
+    directions = (camera_dirs[:, None, :] * new_c2w[:, :3, :3]).sum(dim=-1)
+    """
+
+
+
+    """
+    Use this for a 360 directionakl rendering 
+
+    directions_360 = get_ray_directions_360(x, y, intrinsic[0, 0, 2] * 2, intrinsic[0, 1, 2] * 2)
+    directions = (directions_360[:, None, :] * c2w[:, :3, :3]).sum(dim=-1)
+    
+    """
+
+
+    """
+    original:code
     """
     camera_dirs = torch.nn.functional.pad(
         torch.stack(
