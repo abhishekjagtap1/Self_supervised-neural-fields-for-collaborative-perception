@@ -289,10 +289,7 @@ def vis_occ_plotly(
     title: str = None,
 ) -> go.Figure:  # type: ignore
     fig = go.Figure()  # start with an empty figure
-    print(coords)
-    print("check",coords[:, 0])
-    #coords.cpu()
-    #colors.cpu()
+
     if coords is not None:
         # Add static trace
         static_trace = go.Scatter3d(
@@ -495,10 +492,6 @@ def visualize_voxels(
         all_occupied_dynamic_points = []
         empty_dynamic_voxels = torch.zeros(*dynamic_voxel_resolution, device=device)
 
-    # collect some patches for PCA
-    to_compute_pca_patches = []
-
-
     pbar = tqdm(
         dataset.full_pixel_set,
         desc="querying depth",
@@ -511,6 +504,7 @@ def visualize_voxels(
             data_dict[k] = v.to(device)
         if i < dataset.num_cams:
             # collect all patches from the first timestep
+            to_compute_pca_patches = []
             with torch.no_grad():
                 render_results = render_rays(
                     radiance_field=model,
@@ -524,6 +518,7 @@ def visualize_voxels(
                 dino_feats = render_results["dino_pe_free"]
             else:
                 dino_feats = render_results["dino_feat"]
+                #dino_feats = render_results["rgb"]
             dino_feats = dino_feats.reshape(-1, dino_feats.shape[-1])
             to_compute_pca_patches.append(dino_feats)
         # query the depth. we force a lidar mode here so that the renderer will skip
@@ -531,6 +526,8 @@ def visualize_voxels(
         data_dict["lidar_origins"] = data_dict["origins"].to(device)
         data_dict["lidar_viewdirs"] = data_dict["viewdirs"].to(device)
         data_dict["lidar_normed_timestamps"] = data_dict["normed_timestamps"].to(device)
+
+
         with torch.no_grad():
             render_results = render_rays(
                 radiance_field=model,
@@ -606,118 +603,112 @@ def visualize_voxels(
                 empty_dynamic_voxels = torch.zeros(
                     *dynamic_voxel_resolution, device=device
                 )
-    # compute the pca reduction
-    dummy_pca_reduction, color_min, color_max = get_robust_pca(
-        torch.cat(to_compute_pca_patches, dim=0).to(device), m=2.5
-    )
-    # now let's query the features
-    all_occupied_static_points = voxel_coords_to_world_coords(
-        aabb_min, aabb_max, static_voxel_resolution, torch.nonzero(empty_static_voxels)
-    )
-    chunk = 2**18
-    pca_colors = []
-    occupied_points = []
 
-    pbar = tqdm(
-        range(0, all_occupied_static_points.shape[0], chunk),
-        desc="querying static features",
-        dynamic_ncols=True,
-    )
-    for i in pbar:
-        occupied_points_chunk = all_occupied_static_points[i : i + chunk]
-        density_list = []
-        # we need to accumulate the density from all proposal networks as well
-        # to ensure reliable density estimation
-        for p in proposal_networks:
-            density_list.append(p(occupied_points_chunk)["density"].squeeze(-1))
-        with torch.no_grad():
-            results = model.forward(
-                occupied_points_chunk,
-                query_feature_head=False,
-            )
-        density_list.append(results["density"])
-        density = torch.stack(density_list, dim=0)
-        density = torch.mean(density, dim=0)
-        # use a preset threshold to determine whether a voxel is occupied
-        selector = density > 0.5
-        occupied_points_chunk = occupied_points_chunk[selector]
-        print(len(occupied_points_chunk))
-        #if len(occupied_points_chunk) == 0:
-            # skip if no occupied points in this chunk
-         #   continue
-        with torch.no_grad():
-            feats = model.forward(
-                occupied_points_chunk,
-                query_feature_head=True,
-                query_pe_head=False,
-            )["dino_feat"]
+        # collect some patches for PCA
+        # to_compute_pca_patches = []
 
-        # print(feats)
-        print(feats.shape)
-        colors = feats @ dummy_pca_reduction
-        print(colors)
-        del feats
-        colors = (colors - color_min) / (color_max - color_min)
-        pca_colors.append(torch.clamp(colors, 0, 1))
-        print("pca_colors_after_clamp")
-        occupied_points.append(occupied_points_chunk)
-
-
-    print("pca_colours_after_loop", pca_colors)
-    #print(pca_colors)
-    pca_colors = torch.cat(pca_colors, dim=0)
-    occupied_points = torch.cat(occupied_points, dim=0)
-    if is_dynamic:
-        dynamic_coords = None
-        dynamic_colors = None
-        """
-        dynamic_pca_colors = []
-        dynamic_occupied_points = []
-        unq_timestamps = dataset.pixel_source.unique_normalized_timestamps.to(device)
-        # query every 10 frames
+        # compute the pca reduction
+        # dummy_pca_reduction, color_min, color_max = get_robust_pca(
+        #  torch.cat(to_compute_pca_patches, dim=0).to(device), m=2.5
+        # )
+        # now let's query the features
+        all_occupied_static_points = voxel_coords_to_world_coords(
+            aabb_min, aabb_max, static_voxel_resolution, torch.nonzero(empty_static_voxels)
+        )
+        chunk = 2 ** 18
+        pca_colors = []
+        occupied_points = []
         pbar = tqdm(
-            range(0, len(all_occupied_dynamic_points), 10),
-            desc="querying dynamic fields",
+            range(0, all_occupied_static_points.shape[0], chunk),
+            desc="querying static features",
             dynamic_ncols=True,
         )
         for i in pbar:
-            occupied_points_chunk = all_occupied_dynamic_points[i]
-            normed_timestamps = unq_timestamps[i].repeat(
-                occupied_points_chunk.shape[0], 1
-            )
+            occupied_points_chunk = all_occupied_static_points[i: i + chunk]
+            density_list = []
+            # we need to accumulate the density from all proposal networks as well
+            # to ensure reliable density estimation
+            for p in proposal_networks:
+                density_list.append(p(occupied_points_chunk)["density"].squeeze(-1))
             with torch.no_grad():
                 results = model.forward(
                     occupied_points_chunk,
-                    data_dict={"normed_timestamps": normed_timestamps},
                     query_feature_head=False,
                 )
-            selector = results["dynamic_density"].squeeze() > 0.1
+            density_list.append(results["density"])
+            density = torch.stack(density_list, dim=0)
+            density = torch.mean(density, dim=0)
+            #####from here
+            # use a preset threshold to determine whether a voxel is occupied
+            selector = density > 0.5
             occupied_points_chunk = occupied_points_chunk[selector]
             if len(occupied_points_chunk) == 0:
+                # skip if no occupied points in this chunk
                 continue
-            # query some features
-            normed_timestamps = unq_timestamps[i].repeat(
-                occupied_points_chunk.shape[0], 1
-            )
             with torch.no_grad():
+
                 feats = model.forward(
                     occupied_points_chunk,
-                    data_dict={"normed_timestamps": normed_timestamps},
                     query_feature_head=True,
                     query_pe_head=False,
-                )["dynamic_dino_feat"]
-            colors = feats @ dummy_pca_reduction
-            del feats
-            colors = (colors - color_min) / (color_max - color_min)
-            dynamic_pca_colors.append(torch.clamp(colors, 0, 1))
-            dynamic_occupied_points.append(occupied_points_chunk)
-        dynamic_coords = [x.cpu().numpy() for x in dynamic_occupied_points]
-        dynamic_colors = [x.cpu().numpy() for x in dynamic_pca_colors]
-        """
+                )["dino_feat"]
 
-    else:
-        dynamic_coords = None
-        dynamic_colors = None
+            # colors = feats @ dummy_pca_reduction
+            colors = feats  # @ dummy_pca_reduction
+            del feats
+            # colors = (colors - color_min) / (color_max - color_min)
+            pca_colors.append(torch.clamp(colors, 0, 1))
+            occupied_points.append(occupied_points_chunk)
+
+        # pca_colors = torch.cat(pca_colors, dim=0)
+        # occupied_points = torch.cat(occupied_points, dim=0)
+        if is_dynamic:
+            dynamic_pca_colors = []
+            dynamic_occupied_points = []
+            unq_timestamps = dataset.pixel_source.unique_normalized_timestamps.to(device)
+            # query every 10 frames
+            pbar = tqdm(
+                range(0, len(all_occupied_dynamic_points), 10),
+                desc="querying dynamic fields",
+                dynamic_ncols=True,
+            )
+            for i in pbar:
+                occupied_points_chunk = all_occupied_dynamic_points[i]
+                normed_timestamps = unq_timestamps[i].repeat(
+                    occupied_points_chunk.shape[0], 1
+                )
+                with torch.no_grad():
+                    results = model.forward(
+                        occupied_points_chunk,
+                        data_dict={"normed_timestamps": normed_timestamps},
+                        query_feature_head=False,
+                    )
+                selector = results["dynamic_density"].squeeze() > 0.1
+                occupied_points_chunk = occupied_points_chunk[selector]
+                if len(occupied_points_chunk) == 0:
+                    continue
+                # query some features
+                normed_timestamps = unq_timestamps[i].repeat(
+                    occupied_points_chunk.shape[0], 1
+                )
+                with torch.no_grad():
+                    feats = model.forward(
+                        occupied_points_chunk,
+                        data_dict={"normed_timestamps": normed_timestamps},
+                        query_feature_head=True,
+                        query_pe_head=False,
+                    )["dynamic_dino_feat"]
+                # colors = feats @ dummy_pca_reduction
+                colors = feats  # @ dummy_pca_reduction
+                del feats
+                # colors = (colors - color_min) / (color_max - color_min)
+                dynamic_pca_colors.append(torch.clamp(colors, 0, 1))
+                dynamic_occupied_points.append(occupied_points_chunk)
+            dynamic_coords = [x.cpu().numpy() for x in dynamic_occupied_points]
+            dynamic_colors = [x.cpu().numpy() for x in dynamic_pca_colors]
+        else:
+            dynamic_coords = None
+            dynamic_colors = None
 
     figure = vis_occ_plotly(
         vis_aabb=vis_voxel_aabb.cpu().numpy().tolist(),

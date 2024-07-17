@@ -4,6 +4,8 @@ import pickle
 import argparse
 import os
 #from utils.misc import NumpyEncoder
+import os
+from itertools import islice
 
 class NumpyEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -13,21 +15,21 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 
-root_path_1 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/val/images/vehicle_camera_basler_16mm"
+root_path_1 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/train/images/vehicle_camera_basler_16mm"
 calib_path_1 = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/vehicle_camera_basler_16mm.json"
 calib_path_lidar_vehicle = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/vehicle_lidar_robosense.json"
 
 
-root_path_2 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/val/images/s110_camera_basler_east_8mm"
+root_path_2 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/train/images/s110_camera_basler_east_8mm"
 calib_path_2 = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/s110_camera_basler_east_8mm.json"
 
-root_path_3 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/val/images/s110_camera_basler_north_8mm"
+root_path_3 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/train/images/s110_camera_basler_north_8mm"
 calib_path_3 = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/s110_camera_basler_north_8mm.json"
 
-root_path_4 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/val/images/s110_camera_basler_south1_8mm"
+root_path_4 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/train/images/s110_camera_basler_south1_8mm"
 calib_path_4 = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/s110_camera_basler_south1_8mm.json"
 
-root_path_5 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/val/images/s110_camera_basler_south2_8mm"
+root_path_5 = "/home/uchihadj/TUMtraf/tumtraf_v2x_cooperative_perception_dataset/train/images/s110_camera_basler_south2_8mm"
 calib_path_5 = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/s110_camera_basler_south2_8mm.json"
 
 #town_name = "1688625741_027764001_s110_camera_basler_south2_8mm"
@@ -36,10 +38,11 @@ calib_path_5 = "/home/uchihadj/TUMtraf/tum-traffic-dataset-dev-kit/calib/s110_ca
 timestamp=0
 # Initialize the meta_dict
 meta_dict = {
-    "Camera_FrontLeft": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
-                         "intrinsics": []},
+
     "Camera_Front": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
                      "intrinsics": []},
+    "Camera_FrontLeft": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
+                         "intrinsics": []},
     "Camera_FrontRight": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
                           "intrinsics": []},
     "Camera_Back": {"timestamp": [], "filepath": [], "ego_pose": [], "cam_id": [], "extrinsics": [],
@@ -60,14 +63,15 @@ camera_id_mapping = {
 }
 
 # Iterate through the files in the folder
-for filename in os.listdir(root_path_1):
+#for filename in os.listdir(root_path_1):
+for filename in islice(sorted(os.listdir(root_path_1)), 15):
     if filename.endswith(".jpg") or filename.endswith(".png"):  # Add more file extensions if necessary
         file_path = os.path.join(root_path_1, filename)
         # Append the file path to the metadata dictionary
         meta_dict["Camera_Front"]["filepath"].append(file_path)
         meta_dict["Camera_Front"]["cam_id"].append(camera_id_mapping["Camera_Front"])
         meta_dict["Camera_Front"]["timestamp"].append(timestamp)
-        timestamp +=10
+        timestamp +=1
         with open(calib_path_1, 'rb') as file:
             calib_data = json.load(file)
         with open(calib_path_lidar_vehicle, "rb") as file:
@@ -95,14 +99,15 @@ for filename in os.listdir(root_path_1):
 
 timestamp=0
 # Iterate through the files in the folder
-for filename in os.listdir(root_path_4):
+#for filename in os.listdir(root_path_4):
+for filename in islice(sorted(os.listdir(root_path_4)), 15):
     if filename.endswith(".jpg") or filename.endswith(".png"):  # Add more file extensions if necessary
         file_path = os.path.join(root_path_4, filename)
         # Append the file path to the metadata dictionary
         meta_dict["Camera_FrontLeft"]["filepath"].append(file_path)
         meta_dict["Camera_FrontLeft"]["cam_id"].append(camera_id_mapping["Camera_FrontLeft"])
         meta_dict["Camera_FrontLeft"]["timestamp"].append(timestamp)
-        timestamp +=10
+        timestamp +=1
         with open(calib_path_4, 'rb') as file:
             calib_data = json.load(file)
 
@@ -120,14 +125,15 @@ for filename in os.listdir(root_path_4):
 
 timestamp=0
 # Iterate through the files in the folder
-for filename in os.listdir(root_path_5):
+#for filename in os.listdir(root_path_5):
+for filename in islice(sorted(os.listdir(root_path_5)), 15):
     if filename.endswith(".jpg") or filename.endswith(".png"):  # Add more file extensions if necessary
         file_path = os.path.join(root_path_5, filename)
         # Append the file path to the metadata dictionary
         meta_dict["Camera_FrontRight"]["filepath"].append(file_path)
         meta_dict["Camera_FrontRight"]["cam_id"].append(camera_id_mapping["Camera_FrontRight"])
         meta_dict["Camera_FrontRight"]["timestamp"].append(timestamp)
-        timestamp +=10
+        timestamp +=1
         with open(calib_path_5, 'rb') as file:
             calib_data = json.load(file)
 
@@ -143,6 +149,10 @@ for filename in os.listdir(root_path_5):
         meta_dict["Camera_FrontRight"]["extrinsics"].append(extrinsic_matrix)
         meta_dict["Camera_FrontRight"]["ego_pose"].append(extrinsic_matrix)
 timestamp=0
+with open("benshmark_scene_1_emernerf.json", "w") as outfile:
+   json.dump(meta_dict, outfile, cls=NumpyEncoder)
+
+print("Finished")
 # Iterate through the files in the folder
 for filename in os.listdir(root_path_2):
     if filename.endswith(".jpg") or filename.endswith(".png"):  # Add more file extensions if necessary
@@ -192,10 +202,7 @@ for filename in os.listdir(root_path_3):
         meta_dict["Camera_Back"]["ego_pose"].append(extrinsic_matrix)
 
 
-with open("tumtraf_collaborative_front_fixed.json", "w") as outfile:
-   json.dump(meta_dict, outfile, cls=NumpyEncoder)
 
-print("Finished")
 
 
 

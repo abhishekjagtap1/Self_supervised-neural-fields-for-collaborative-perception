@@ -81,10 +81,10 @@ def get_rays(
     For a 10 degree rotational novel view
     use below code 
     """
-    """
-    
-    angle_degrees = torch.tensor(-10.0)
+
+    angle_degrees = torch.tensor(-30.0)
     angle_radians = torch.deg2rad(angle_degrees)
+    
     rotation_matrix = torch.tensor(
         [[torch.cos(angle_radians), 0, torch.sin(angle_radians)],
          [0, 1, 0],
@@ -92,10 +92,10 @@ def get_rays(
         device=c2w.device, dtype=c2w.dtype
     )
 
-    new_rotation = torch.matmul(c2w[:, :3, :3], rotation_matrix.transpose(0, 1))
+    new_rotation = torch.matmul(c2w[:, :3, :3], rotation_matrix)
 
     # Add a small translation along the x-axis
-    translation = torch.tensor([0.0, 0.0, 1.0], device=c2w.device, dtype=c2w.dtype)
+    translation = torch.tensor([0.0, 0.0, 10.0], device=c2w.device, dtype=c2w.dtype)
 
     # Combine the rotation and translation to form the new c2w matrix
     new_c2w = torch.cat([new_rotation, c2w[:, :3, -1][:, :, None] + translation], dim=-1)
@@ -113,22 +113,21 @@ def get_rays(
         value=1.0,
     )
     directions = (camera_dirs[:, None, :] * new_c2w[:, :3, :3]).sum(dim=-1)
-    """
-
-
 
     """
     Use this for a 360 directionakl rendering 
 
     directions_360 = get_ray_directions_360(x, y, intrinsic[0, 0, 2] * 2, intrinsic[0, 1, 2] * 2)
     directions = (directions_360[:, None, :] * c2w[:, :3, :3]).sum(dim=-1)
-    
     """
+
 
 
     """
     original:code
     """
+    """
+    
     camera_dirs = torch.nn.functional.pad(
         torch.stack(
             [
@@ -140,15 +139,18 @@ def get_rays(
         (0, 1),
         value=1.0,
     )  # [num_rays, 3]
-
     # rotate the camera rays w.r.t. the camera pose
-    directions = (camera_dirs[:, None, :] * c2w[:, :3, :3]).sum(dim=-1)
+    """
+
+
+    #directions = (camera_dirs[:, None, :] * c2w[:, :3, :3]).sum(dim=-1)
     origins = torch.broadcast_to(c2w[:, :3, -1], directions.shape)
     # TODO: not sure if we still need direction_norm
     direction_norm = torch.linalg.norm(directions, dim=-1, keepdims=True)
     # normalize the ray directions
     viewdirs = directions / (direction_norm + 1e-8)
     return origins, viewdirs, direction_norm
+
 
 
 class ScenePixelSource(abc.ABC):

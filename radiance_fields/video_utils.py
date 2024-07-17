@@ -161,18 +161,12 @@ def render(
             # ------------- rgb ------------- #
             rgb = results["rgb"]
             rgbs.append(get_numpy(rgb))
+            #print(rgbs.shape())
             if "pixels" in data_dict:
                 gt_rgbs.append(get_numpy(data_dict["pixels"]))
-            """            import numpy as np
-            np.save("/home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_eval/pred_rgb.npy", rgb.cpu().numpy())
-            np.save("/home/uchihadj/EmerNeRF/work_dirs/tum_traf/tum_traf_full_infra_eval/gt_rgb.npy", gt_rgbs.numpy().cpu())
-            
+            """
             import numpy as np
             import matplotlib.pyplot as plt
-            pred = rgbs.detach().cpu().numpy()
-            gt_rgbs = gt_rgbs.detach().cpu().numpy()
-            print(pred.shape)
-
             # Create a figure with two subplots for predicted and ground truth images
             fig, axes = plt.subplots(1, 2, figsize=(12, 6))
 
@@ -189,6 +183,7 @@ def render(
             # Show the plot
             plt.show()
             """
+
 
 
             if "static_rgb" in results:
@@ -447,6 +442,7 @@ def render(
                 if gt_dino_feat is not None:
                     gt_dino_feat = torch.clamp(gt_dino_feat, 0, 1)
                     gt_dinos.append(get_numpy(gt_dino_feat))
+
     # messy aggregation...
     results_dict = {}
     results_dict["psnr"] = non_zero_mean(psnrs) if compute_metrics else -1

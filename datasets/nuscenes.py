@@ -88,9 +88,11 @@ class NuScenesPixelSource(ScenePixelSource):
         if os.path.exists("/home/uchihadj/EmerNeRF/datasets/tumtraf_overlapping_scene_south_1_2_3.json"):
         #if os.path.exists("/home/uchihadj/EmerNeRF/shata"): ##Only for debugging cam2world data
             #with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_infra_south_2_full_train.json", "r") as f:
-            with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_overlapping_scene_south_1_2_3.json", "r") as f: # debugging with wrong meta data
+            #with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_overlapping_in_one_camera.json", "r") as f:
+            #with open("/home/uchihadj/EmerNeRF/datasets/tumtraf_collaborative_front_fixed.json", "r") as f:
+            with open("/home/uchihadj/EmerNeRF/datasets/benshmark_scene_1_emernerf.json", "r") as f:# debugging with wrong meta data
                 meta_dict = json.load(f)
-            logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/tumtraf_overlapping_scene_south_1_2_3.json")
+            logger.info(f"[Pixel] Loaded camera meta from /home/uchihadj/EmerNeRF/datasets/benshmark_scene_1_emernerf.json")
             return meta_dict
         else:
             logger.info(f"[Pixel] Creating camera meta at {self.meta_file_path}")
@@ -203,7 +205,10 @@ class NuScenesPixelSource(ScenePixelSource):
             self.end_timestep = min(self.end_timestep, num_timestamps - 1)
 
         # to make sure the last timestep is included
-        self.end_timestep += 1
+        #hardcoded for now
+        #self.start_timestep = 0
+        #self.end_timestep = 15
+        #self.end_timestep += 1
         self.start_timestep = min(self.start_timestep, self.end_timestep - 1)
         self.scene_fraction = (self.end_timestep - self.start_timestep) / num_timestamps
 
@@ -254,17 +259,18 @@ class NuScenesPixelSource(ScenePixelSource):
 
         # we tranform the camera poses w.r.t. the first timestep to make the origin of
         # the first ego pose  as the origin of the world coordinate system.
-        #initial_ego_to_global = self.meta_dict["Camera_Front"]["ego_pose"][
-        initial_ego_to_global = self.meta_dict["Camera_FrontLeft"]["ego_pose"][
+        initial_ego_to_global = self.meta_dict["Camera_Front"]["ego_pose"][
+        #initial_ego_to_global = self.meta_dict["Camera_FrontLeft"]["ego_pose"][
             self.start_timestep
         ]
         global_to_initial_ego = np.linalg.inv(initial_ego_to_global)
         for t in range(self.start_timestep, self.end_timestep):
+
             #ego_to_global_current = self.meta_dict["Camera_Front"]["ego_pose"][t]
-            ego_to_global_current = self.meta_dict["Camera_FrontLeft"]["ego_pose"][t]
+            #ego_to_global_current = self.meta_dict["Camera_FrontLeft"]["ego_pose"][t]
             # compute ego_to_world transformation
-            ego_to_world = global_to_initial_ego @ ego_to_global_current
-            ego_to_worlds.append(ego_to_world)
+            #ego_to_world = global_to_initial_ego @ ego_to_global_current
+            #ego_to_worlds.append(ego_to_world)
 
             """ 
             #for t in range(self.start_timestep, self.end_timestep):
@@ -283,6 +289,11 @@ class NuScenesPixelSource(ScenePixelSource):
             """
             for cam_name in self.camera_list:
                 cam_to_ego = self.meta_dict[cam_name]["extrinsics"][t]
+                ################################ new updated #####
+                ego_to_global_current = self.meta_dict[cam_name]["ego_pose"][t]
+                # compute ego_to_world transformation
+                ego_to_world = global_to_initial_ego @ ego_to_global_current
+                ###########
                 # Because we use opencv coordinate system to generate camera rays,
                 # we need to store the transformation from opencv coordinate system to dataset
                 # coordinate system. However, the nuScenes dataset uses the same coordinate
@@ -343,7 +354,7 @@ class NuScenesPixelSource(ScenePixelSource):
         )
 
         self.cam_to_worlds = torch.from_numpy(np.stack(cam_to_worlds, axis=0)).float()
-        self.ego_to_worlds = torch.from_numpy(np.stack(ego_to_worlds, axis=0)).float()
+        #self.ego_to_worlds = torch.from_numpy(np.stack(ego_to_worlds, axis=0)).float()
         self.global_to_initial_ego = torch.from_numpy(global_to_initial_ego).float()
         self.cam_ids = torch.from_numpy(np.stack(cam_ids, axis=0)).long()
 
@@ -675,7 +686,7 @@ class NuScenesDataset(SceneDataset):
             all_timestamps.append(pixel_source.timestamps)
             self.start_timestep = pixel_source.start_timestep
             self.end_timestep = pixel_source.end_timestep
-            self.scene_fraction = pixel_source.scene_fraction
+            #self.scene_fraction = pixel_source.scene_fraction
         # ---- create lidar source ---- #
         if self.data_cfg.lidar_source.load_lidar:
             lidar_source = NuScenesLiDARSource(

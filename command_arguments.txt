@@ -61,7 +61,7 @@
 
 --config_file configs/default_dynamic.yaml \
 --project tum_traf_overlapping \
---run_name train_overlapping_south_1_2_3 \
+--run_name overlap_train_full \
 --render_data_video
 
 --config_file configs/default_flow.yaml \
@@ -213,3 +213,17 @@ tum_traf_v2x_feature_run_2
         return results_dict
 
 
+
+"""
+Use this to run a default
+"""
+
+Debug command_promt:
+python train_emernerf.py
+--config_file
+configs/default_dynamic.yaml
+--project
+tum_traf_overlapping
+--run_name
+voxels_features_3_cams
+--render_data_video

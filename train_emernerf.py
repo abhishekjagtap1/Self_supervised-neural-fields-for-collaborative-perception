@@ -342,7 +342,21 @@ def do_evaluation(
             del render_results, vis_frame_dict
             torch.cuda.empty_cache()
         if cfg.render.render_full:
-            logger.info("Evaluating Full Set...")
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            """            logger.info("Visualizing voxel features...")
+            visualize_voxels(
+                cfg,
+                model,
+                proposal_estimator,
+                proposal_networks,
+                dataset,
+                device=device,
+                save_html=True,
+                is_dynamic=cfg.nerf.model.head.enable_dynamic_branch,
+            )
+            logger.info("Visualization done!")
+            """
+
             render_results = render_pixels(
                 cfg=cfg,
                 model=model,
@@ -966,6 +980,21 @@ def main(args):
                         ],
                         return_decomposition=True,
                     )
+                    """
+                    
+                    logger.info("Visualizing voxel features...")
+                    visualize_voxels(
+                        cfg,
+                        model,
+                        proposal_estimator,
+                        proposal_networks,
+                        dataset,
+                        device=device,
+                        save_html=True,
+                        is_dynamic=cfg.nerf.model.head.enable_dynamic_branch,
+                    )
+                    logger.info("Visualization done!")
+                    """
                 if args.enable_wandb:
                     wandb.log(
                         {
