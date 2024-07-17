@@ -3,22 +3,20 @@
 ## Based on Emernerf
 
 ## For Benchmarking use the overlapping_dev branch
+```shell
+python train_emernerf.py --config_file configs/default_dynamic.yaml --project tum_traf_overlapping --run_name benchmark_scene_1_results
+```
+# After training add --eval_only argument for evaluation and rendering
+# Refer to commad_arguments.txt file for more info
+
+# Refer TUMTRAF dataset page for downloading and dataset and calibration (Pre-requisite for reproducing results on TUMTRAF)
+
+# Not at all documented properly and many parts of the code are hardcoded (Feel free to contact me incase you are stuck somewhere), Follow the below installation guidelines for easy setup
+
+
 
 # Note Readme is not updated, switch between branches to test and evaluate for nuscenes - "dev_nuscenes_nuscenes" and deep accident v2x dataset - "dev_load_calibration"
 
-PyTorch implementation of:
-> [**EmerNeRF: Emergent Spatial-Temporal Scene Decomposition via Self-Supervision**](https://arxiv.org/abs/2311.02077),  
-> [Jiawei Yang](https://jiawei-yang.github.io), [Boris Ivanovic](https://www.borisivanovic.com/), [Or Litany](https://orlitany.github.io/), [Xinshuo Weng](https://www.xinshuoweng.com/), [Seung Wook Kim](https://seung-kim.github.io/seungkim/), [Boyi Li](https://sites.google.com/site/boyilics/home), [Tong Che](), [Danfei Xu](https://faculty.cc.gatech.edu/~danfei/), [Sanja Fidler](https://www.cs.utoronto.ca/~fidler/), [Marco Pavone](https://web.stanford.edu/~pavone/), [Yue Wang](https://yuewang.xyz/)
-
-#### [Project page](https://emernerf.github.io) | [Paper](https://arxiv.org/abs/2311.02077)
-
-<p align="center">
-  <img src="assets/overview.png" alt="EmerNeRF overview">
-</p>
-
-## News
-
-- [2023/11/05] We've released an initial version of EmerNeRF, which supports the NeRF On-The-Road (NOTR) dataset sourced from the Waymo Open Dataset. NuScenes support is also available.
 
 ## Table of Contents
 
