@@ -2,6 +2,8 @@
 
 ## Based on Emernerf
 
+## For Benchmarking use the overlapping_dev branch
+
 # Note Readme is not updated, switch between branches to test and evaluate for nuscenes - "dev_nuscenes_nuscenes" and deep accident v2x dataset - "dev_load_calibration"
 
 PyTorch implementation of:
